@@ -1,0 +1,5 @@
+assembler
+examples
+third_party_emulator
+*.o
+manuals
