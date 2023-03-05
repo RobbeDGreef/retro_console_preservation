@@ -1,59 +1,55 @@
 default Order dec
 $include <prelude.sail>
+$include "prelude.sail"
+$include "types.sail"
+$include "exceptions.sail"
+$include "utils.sail"
+$include "memory.sail"
+$include "instructions.sail"
 
-/* prelude */
-
-val print = "print_endline" : string -> unit
-
-/* wrong implementation to make compiler happy */
-function print_string (s1, s2) : (string, string) -> unit = {
-    print(s1);
-    print(s2);
-}
-
-/* Register definitions */
-
-type wordlen : Int = 8
-type dwordlen : Int = 16
-
-type wordlen_bytes : Int = 1
-type dwordlen_bytes : Int = 2
-
-type wordbits = bits(wordlen)
-type dwordbits = bits(dwordlen)
-
-type regtype = wordbits
-type dregtype = dwordbits
-
-/* registers */
-register PC : dregtype
-register AF : dregtype
-register BC : dregtype
-register DE : dregtype
-register HL : dregtype
-register SP : dregtype
-
-/* Exceptions */
-
-union exception = {
-  error_not_implemented : string,
-  error_internal_error  : unit
-}
 
 /* Code */
-function loop () : unit -> unit = {
-    while true do {
-        print_bits("PC = ", PC);
-        PC = PC + 1;
-    }
+function fetch_and_execute(): unit -> bool = {
+    let instruction = MEMr(PC);
+
+    print_bits("PC = ", PC);
+    print_bits("First 8 bits of instruction = ", instruction);
+    
+    PC = PC + 1;
+
+    /* Check whether we successfully decoded our instruction, if not stop looping */
+    let loop_again : bool = match decode(instruction) {
+      Some(ast) => execute(ast),
+      None() => { print("invalid instruction"); false }
+    };
+
+    print_cpu_state();
+
+    return loop_again;
 }
 
-function main () : unit -> unit = {
+function cpu_loop () : unit -> unit = {
+    while (fetch_and_execute()) do
+        ();
+}
 
-    PC = sail_zero_extend(0x000, sizeof(dwordlen));
+function setup (): unit -> unit = {
+    /* setup registers */
+    PC = EXTZ(0x100);
+    SP = 0xFFFE;
+}
+
+
+function main () : unit -> unit = {
+    setup();
     
+
+    // pass in binary using flags
+    // flag: "binary"
+    // example: ./emulator --binary=0x0,test_roms/simple_increment_loop/simple.gb
+
     try {
-        loop();
+        cpu_loop();
     } catch {
         error_not_implemented(s) => print_string("Error: Not implemented: ", s),
         error_internal_error() => print("Error: internal error")
