@@ -26,7 +26,7 @@ Sail directory will in most cases be the path
 ## Gameboy assembler
 
 According to [this](https://www.chibiakumas.com/z80/Gameboy.php) document the [VASM assembler](http://sun.hasenbraten.de/vasm/)
-can compile gameboy assembly written in Z80 syntax (dispite the gameboy not having a z80 
+can compile gameboy assembly written in Z80 syntax (despite the gameboy not having a z80 
 cpu).
 
 However [rgbds](https://rgbds.gbdev.io/) is also a possibility and seems to be more widely used.
