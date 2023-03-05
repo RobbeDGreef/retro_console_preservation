@@ -23,6 +23,11 @@ Sail directory will in most cases be the path
     /home/robbe/.opam/<switch>/share/sail
 
     export SAIL_DIR=/home/robbe/.opam/4.13.1/share/sail
+
+## Running third party gameboy emulator
+
+    wine64 ./third_party_emulator/bgb.exe
+
 ## Gameboy assembler
 
 According to [this](https://www.chibiakumas.com/z80/Gameboy.php) document the [VASM assembler](http://sun.hasenbraten.de/vasm/)
