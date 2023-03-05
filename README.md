@@ -85,5 +85,9 @@ To install rgbds follow the instructions in [this](https://rgbds.gbdev.io/instal
 | call      f,nn    | -      | xx nn nn | Call to nn, SP=Sp-2 (SP) = PC, PC=nn (conditional)
 | ret               | -      | C9       | Return, PC=(SP) SP=SP+2
 
+## Todo
+- write a dockerfile with a pinned specific version of sail
+
+
 ## License
 All rights reserved.
