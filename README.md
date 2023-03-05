@@ -1,5 +1,13 @@
 # Retro console preservation with sail
 
+## Building test ROM
+
+The test roms will include a makefile that builds the rom file for you.
+
+Alternatively,
+[The following document contains all the necessary information](https://gbdev.io/gb-asm-tutorial/part1/hello_world.html) if you need
+#to compile manually
+
 ## Building
 
 Generate C emulator with
