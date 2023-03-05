@@ -46,6 +46,7 @@ To install rgbds follow the instructions in [this](https://rgbds.gbdev.io/instal
 [Efficient embedded software development using QEMU](https://static.lwn.net/lwn/images/conf/rtlws11/papers/proc/p09.pdf)
 [Optimizing Control Transfer and Memory Virtualization in Full System Emulators](https://dl.acm.org/doi/pdf/10.1145/2837027)
 [Optimizing Memory Translation Emulation in Full System Emulators](https://dl.acm.org/doi/pdf/10.1145/2686034)
+[Fast cycle estimation methodology for instruction level emulation](https://ieeexplore.ieee.org/document/6176470)
 
 ### Examples
 [RISCV in sail, handwritten](https://github.com/riscv/sail-riscv)
