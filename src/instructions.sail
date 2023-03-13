@@ -143,7 +143,7 @@ val execute : ast -> bool effect {rreg, wreg}
 scattered function execute
 
 /* Instruction clock cycle count */
-val get_cycles_per_instruction : ast -> int effect 
+val get_cycles_per_instruction : ast -> int effect {rreg}
 scattered function get_cycles_per_instruction
 
 function clause get_cycles_per_instruction(LDRN(r, n)) = 8
