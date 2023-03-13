@@ -4,7 +4,7 @@ type src = regname
 type imm8 = bits(8)
 type imm16 = bits(16)
 
-mapping reg8_name : shortreg_name <-> regname = {
+mapping reg8_name : reg8_enum <-> regname = {
     B <-> 0b000,
     C <-> 0b001,
     D <-> 0b010,

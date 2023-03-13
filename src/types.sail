@@ -23,7 +23,7 @@ register SP : dword
 
 let registers : vector(4, dec, register(dreg)) = [ ref AF, ref BC, ref DE, ref HL]
 
-enum shortreg_name = {
+enum reg8_enum = {
     A,
     B,
     C,
