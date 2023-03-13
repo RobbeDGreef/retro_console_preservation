@@ -44,6 +44,7 @@ To install rgbds follow the instructions in [this](https://rgbds.gbdev.io/instal
 [Some test roms](https://gbdev.gg8.se/wiki/articles/Test_ROMs)
 [Thesis proposal](https://dinf.vub.ac.be/bthesis/?proposal=proposals%2FSOFT-Retro+console+preservation+and+emulation+with+Sail)
 [Gameboy asm tutorial](https://eldred.fr/gb-asm-tutorial/index.html)
+[Gameboy technical reference](https://gekkio.fi/files/gb-docs/gbctr.pdf)
 
 ### Papers
 
