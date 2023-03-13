@@ -15,3 +15,11 @@ val "shiftr" : forall 'm 'n, 'n >= 0. (bits('m), atom('n)) -> bits('m)
 
 overload operator >> = {shift_bits_right, shiftr}
 overload operator << = {shift_bits_left, shiftl}
+
+val get_time_micro = {
+  c: "get_time_micro"
+} : unit -> int
+
+val sleep_micro = {
+    c: "sleep_micro"
+} : int -> unit

@@ -7,9 +7,9 @@ $include "utils.sail"
 $include "memory.sail"
 $include "instructions.sail"
 
-
 /* Code */
 function fetch_and_execute(): unit -> bool = {
+    let start_micro = get_time_micro();
     let instruction = MEMr(PC);
 
     print_bits("PC = ", PC);
@@ -18,12 +18,26 @@ function fetch_and_execute(): unit -> bool = {
     PC = PC + 1;
 
     /* Check whether we successfully decoded our instruction, if not stop looping */
-    let loop_again : bool = match decode(instruction) {
+    let decoded = decode(instruction);
+
+    let loop_again : bool = match decoded {
       Some(ast) => execute(ast),
       None() => { print("invalid instruction"); false }
     };
 
     print_cpu_state();
+
+    // Todo: better way to do this?
+    match decoded {
+        Some(ast) => {
+            let cycles = get_cycles_per_instruction(ast);
+            let micros_per_cycle = 4; // todo: move to global constant;
+            let real_duration = (get_time_micro() - start_micro);
+            let ms_to_wait = cycles * micros_per_cycle - real_duration;
+            sleep_micro(ms_to_wait);
+        }
+    };
+    
 
     return loop_again;
 }

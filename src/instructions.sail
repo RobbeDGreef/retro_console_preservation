@@ -100,6 +100,11 @@ function clause decode24 (not_supported)
 val execute : ast -> bool effect {rreg, wreg}
 scattered function execute
 
+/* Instruction clock cycle count */
+val get_cycles_per_instruction : ast -> int effect 
+scattered function get_cycles_per_instruction
+
+function clause get_cycles_per_instruction(LDRN(r, n)) = 8
 function clause execute(LDRN(r, n)) = {
     write_reg8(r) = n;
     true
@@ -110,10 +115,14 @@ function clause execute(ADD(n)) = {
     true
 }
 
+
+function clause get_cycles_per_instruction(ADDAN(n)) = 12
 function clause execute(ADDAN(n)) = {
     write_reg8(reg8_name(A)) = read_reg8(reg8_name(A)) + n;
     true
 }
+
+function clause get_cycles_per_instruction(JPNN(nn)) = 16
 function clause execute(JPNN(nn)) = {
     set_PC(nn);
     true
