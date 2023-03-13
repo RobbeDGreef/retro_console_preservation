@@ -1,6 +1,12 @@
 type regname = bits(3)
+type regname16 = bits(2)
+
 type dst = regname
 type src = regname
+type dst16 = regname16
+type src16 = regname16
+
+
 type imm8 = bits(8)
 type imm16 = bits(16)
 
@@ -14,29 +20,65 @@ mapping reg8_name : reg8_enum <-> regname = {
     A <-> 0b111
 }
 
+mapping reg16_name : reg16_enum <-> regname16 = {
+    BC <-> 0b00,
+    DE <-> 0b01,
+    HL <-> 0b10,
+    SP <-> 0b11
+}
+
 val read_reg8 : regname -> word effect {rreg}
 function read_reg8(r) = {
     match r {
-        reg8_name(B) => BC.higher(),
-        reg8_name(C) => BC.lower(),
-        reg8_name(D) => DE.higher(),
-        reg8_name(E) => DE.lower(),
-        reg8_name(H) => HL.higher(),
-        reg8_name(L) => HL.lower(),
-        reg8_name(A) => AF.higher()
-    }
+        reg8_name(B) => reg_BC.higher(),
+        reg8_name(C) => reg_BC.lower(),
+        reg8_name(D) => reg_DE.higher(),
+        reg8_name(E) => reg_DE.lower(),
+        reg8_name(H) => reg_HL.higher(),
+        reg8_name(L) => reg_HL.lower(),
+        reg8_name(A) => reg_AF.higher()
+    };
 }
 
 val write_reg8 : (regname, word) -> unit effect {wreg}
 function write_reg8(r, w) = {
     match r {
-        reg8_name(B) => BC->higher() = w,
-        reg8_name(C) => BC->lower() = w,
-        reg8_name(D) => DE->higher() = w,
-        reg8_name(E) => DE->lower() = w,
-        reg8_name(H) => HL->higher() = w,
-        reg8_name(L) => HL->lower() = w,
-        reg8_name(A) => AF->higher() = w
+        reg8_name(B) => reg_BC->higher() = w,
+        reg8_name(C) => reg_BC->lower() = w,
+        reg8_name(D) => reg_DE->higher() = w,
+        reg8_name(E) => reg_DE->lower() = w,
+        reg8_name(H) => reg_HL->higher() = w,
+        reg8_name(L) => reg_HL->lower() = w,
+        reg8_name(A) => reg_AF->higher() = w
+    };
+}
+
+val read_reg16 : regname16 -> dword effect {rreg}
+function read_reg16(r) = {
+    match r {
+        reg16_name(BC) => reg_BC.bits(),
+        reg16_name(DE) => reg_DE.bits(),
+        reg16_name(HL) => reg_HL.bits(),
+        reg16_name(SP) => reg_SP
+    };
+}
+
+val write_reg16 : (regname16, dword) -> unit effect {wreg}
+function write_reg16(r, w) = {
+    // Q(Robbe): BUG??????
+    /*
+    match r {
+        reg16_name(BC) => reg_BC->bits() = w,
+        reg16_name(DE) => reg_DE->bits() = w,
+        reg16_name(HL) => reg_HL->bits() = w,
+        reg16_name(SP) => reg_SP = w
+    };
+    */
+    match r {
+        0b00 => reg_BC->bits() = w,
+        0b01 => reg_DE->bits() = w,
+        0b10 => reg_HL->bits() = w,
+        0b11 => reg_SP = w
     };
 }
 

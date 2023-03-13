@@ -15,7 +15,11 @@ val read_ram = "read_ram" : forall 'n 'm.
 val MEMw : (address, word) -> unit
 function MEMw(addr, value) = write_ram(32, 1, 32^0x0, EXTZ(addr), value)
 
+val MEMw16 : (address, dword) -> unit
+function MEMw16(addr, value) = write_ram(32, 2, 32^0x0, EXTZ(addr), value)
+
 val MEMr : address -> word
 function MEMr(addr) = read_ram(32, 1, 32^0x0, EXTZ(addr))
 
-val MEMri : address -> word
+val MEMr16 : (address) -> dword
+function MEMr16(addr) = read_ram(32, 2, 32^0x0, EXTZ(addr))

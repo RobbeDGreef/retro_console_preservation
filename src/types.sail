@@ -23,13 +23,11 @@ bitfield acc_flags : dword = {
 }
 
 register PC : dword
-register AF : acc_flags
-register BC : dreg
-register DE : dreg
-register HL : dreg
-register SP : dword
-
-let registers : vector(4, dec, register(dreg)) = [ ref AF, ref BC, ref DE, ref HL]
+register reg_AF : acc_flags
+register reg_BC : dreg
+register reg_DE : dreg
+register reg_HL : dreg
+register reg_SP : dword
 
 enum reg8_enum = {
     A,
@@ -39,4 +37,12 @@ enum reg8_enum = {
     E,
     H,
     L
+}
+
+enum reg16_enum = {
+    AF,
+    BC,
+    DE,
+    HL,
+    SP
 }
