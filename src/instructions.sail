@@ -46,9 +46,9 @@ function set_PC(addr) = {
 }
 
 scattered union ast
-union clause ast = LD       : (dst, imm8)       /* Load immediate into register */
-union clause ast = JP       : (imm16)           /* Jump to absolute address PC=addr */
-union clause ast = ADD      : (imm8)            /* Add to register */
+union clause ast = LDRN             : (dst, imm8)       /* Load immediate into register */
+union clause ast = JPNN             : (imm16)           /* Jump to absolute address PC=addr */
+union clause ast = ADDAN            : (imm8)            /* Add immediate to A register */
 
 /**
  * Since this CPU has variable length instructions we need to parse 8 bit
@@ -75,8 +75,9 @@ function clause decode (inst8) = {
 scattered function decode16
 
 function clause decode16 (0b00 @ r : dst @ 0b110 @ n : imm8) 
-    = Some(LD(r, n))
+    = Some(LDRN(r, n))
 function clause decode16 (0b11000110 @ n : imm8) 
+    = Some(ADDAN(n))
     = Some(ADD(n))
 
 function clause decode16 (inst16) = {
@@ -90,7 +91,7 @@ scattered function decode24
 
 /* Q(Robbe): why does n: imm16 give most significant bit result */
 function clause decode24 (0b11000011 @ n1 : imm8 @ n2 : imm8)
-    = Some(JP(EXTZ(n2) << 8 | EXTZ(n1)))
+    = Some(JPNN(EXTZ(n2) << 8 | EXTZ(n1)))
 function clause decode24 (not_supported) 
     = None()
 
@@ -99,7 +100,7 @@ function clause decode24 (not_supported)
 val execute : ast -> bool effect {rreg, wreg}
 scattered function execute
 
-function clause execute(LD(r, n)) = {
+function clause execute(LDRN(r, n)) = {
     write_reg8(r) = n;
     true
 }
@@ -109,7 +110,11 @@ function clause execute(ADD(n)) = {
     true
 }
 
-function clause execute(JP(nn)) = {
+function clause execute(ADDAN(n)) = {
+    write_reg8(reg8_name(A)) = read_reg8(reg8_name(A)) + n;
+    true
+}
+function clause execute(JPNN(nn)) = {
     set_PC(nn);
     true
 }
