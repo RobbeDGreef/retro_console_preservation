@@ -103,6 +103,8 @@ void custom_read_ram(lbits *data,
 		}
 		pthread_spin_unlock(&g_dma_transfer_busy_lock);
 		break;
+	default:
+		break;
 	}
 
 	read_ram(data, addr_size, data_size_mpz, hex_ram, addr_bv);
@@ -136,6 +138,8 @@ bool custom_write_ram(const mpz_t addr_size,	 // unused
 		break;
 	case ECHO:
 		addr -= (ECHO_RAM_BASE - WRAM_BASE);
+		break;
+	default:
 		break;
 	}
 
