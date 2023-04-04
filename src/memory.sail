@@ -1,10 +1,13 @@
+/**
+ * These custom functions are implemented in memory.c
+ */
 
-/* write_ram(address_size, nr_of_bytes, hex_ram, address, data) */
-val write_ram = "write_ram" : forall 'n 'm.
+/* custom_write_ram(address_size, nr_of_bytes, hex_ram, address, data) */
+val custom_write_ram = "custom_write_ram" : forall 'n 'm.
   (atom('m), atom('n), bits('m), bits('m), bits(8 * 'n)) -> unit
 
-/* read_ram(address_size, nr_of_bytes, hex_ram, address) */
-val read_ram = "read_ram" : forall 'n 'm.
+/* custom_read_ram(address_size, nr_of_bytes, hex_ram, address) */
+val custom_read_ram = "custom_read_ram" : forall 'n 'm.
   (atom('m), atom('n), bits('m), bits('m)) -> bits(8 * 'n)
 
 

@@ -8,4 +8,16 @@
 unit sleep_micro(const sail_int micros);
 void get_time_micro(sail_int *rop, const unit u);
 
+unit debug_hook(unit u);
+
+bool custom_write_ram(const mpz_t addr_size,
+					  const mpz_t data_size_mpz,
+					  const lbits hex_ram,
+					  const lbits addr_bv,
+					  const lbits data);
+void custom_read_ram(lbits *data,
+					 const mpz_t addr_size,
+					 const mpz_t data_size_mpz,
+					 const lbits hex_ram,
+					 const lbits addr_bv);
 #endif /* __SUPPORT_H */
