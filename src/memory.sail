@@ -15,14 +15,14 @@ val custom_read_ram = "custom_read_ram" : forall 'n 'm.
  * Memory addresses always need to be 32 or 64 bit. To abstract this from the code
  * we simply zero extend in the memw and memr functions.
  */
-val MEMw : (address, word) -> unit
-function MEMw(addr, value) = write_ram(32, 1, 32^0x0, EXTZ(addr), value)
+val write : (address, word) -> unit
+function write(addr, value) = custom_write_ram(32, 1, 32^0x0, EXTZ(addr), value)
 
-val MEMw16 : (address, dword) -> unit
-function MEMw16(addr, value) = write_ram(32, 2, 32^0x0, EXTZ(addr), value)
+val write16 : (address, dword) -> unit
+function write16(addr, value) = custom_write_ram(32, 2, 32^0x0, EXTZ(addr), value)
 
-val MEMr : address -> word
-function MEMr(addr) = read_ram(32, 1, 32^0x0, EXTZ(addr))
+val read : (address) -> word
+function read(addr) = custom_read_ram(32, 1, 32^0x0, EXTZ(addr))
 
-val MEMr16 : (address) -> dword
-function MEMr16(addr) = read_ram(32, 2, 32^0x0, EXTZ(addr))
+val read16 : (address) -> dword
+function read16(addr) = custom_read_ram(32, 2, 32^0x0, EXTZ(addr))
