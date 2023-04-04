@@ -23,3 +23,6 @@ val get_time_micro = {
 val sleep_micro = {
     c: "sleep_micro"
 } : int -> unit
+val debug_hook = pure {
+  c: "debug_hook"
+} : unit -> unit
