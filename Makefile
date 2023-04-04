@@ -15,10 +15,10 @@ run:
 build: $(EMULATOR)
 
 c_files:
-	sail -c src/main.sail -o $(C_OUT_DIR)/main -c_include "support.h" # -verbose 1 -dtc_verbose 1
+	sail -c src/main.sail -o $(C_OUT_DIR)/main -c_include "support.h" -c_no_main # -verbose 1 -dtc_verbose 1
 
 $(EMULATOR): c_files
-	gcc -O3 $(C_OUT_DIR)/main.c $(C_SUPPORT_SOURCES) $(SAIL_DIR)/lib/*.c -lgmp -lz -I $(C_SUPPORT_HEADERS) -I $(SAIL_DIR)/lib/ -o $(EMULATOR)
+	gcc -O3 -Werror $(C_OUT_DIR)/main.c $(C_SUPPORT_SOURCES) $(SAIL_DIR)/lib/*.c -lgmp -lz -lSDL2 -I $(C_SUPPORT_HEADERS) -I $(SAIL_DIR)/lib/ -o $(EMULATOR)
 
 clean:
 	rm $(C_OUT_DIR)/* -rf
