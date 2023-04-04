@@ -4,3 +4,7 @@ third_party_emulator
 *.o
 manuals
 output
+.gdb_history
+disassembler
+scripts
+test.csv

@@ -5,12 +5,20 @@ EMULATOR = emulator
 C_SUPPORT_SOURCES = $(shell find src/c_support -name "*.c")
 C_SUPPORT_HEADERS = src/c_support/
 
+ROM ?= test_roms/mooneye-test-suite/build/acceptance/add_sp_e_timing.gb
+
 .PHONY: build run
 
 all: build
 
-run:
-	./$(EMULATOR)
+run_simple:
+	$(MAKE) run ROM=test_roms/simple_increment_loop/simple.gb
+
+run_helloworld:
+	$(MAKE) run ROM=test_roms/hello_world/hello_world.gb
+
+run: $(ROM)
+	./$(EMULATOR) --binary=0x0,$<
 
 build: $(EMULATOR)
 
