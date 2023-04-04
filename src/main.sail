@@ -55,7 +55,15 @@ function cpu_loop () : unit -> unit = {
 function setup (): unit -> unit = {
     /* setup registers */
     PC = EXTZ(0x100);
-    SP = 0xFFFE;
+
+    /* Behavior of the DMG bios https://gbdev.io/pandocs/Power_Up_Sequence.html */
+    reg_SP = 0xFFFE;
+    reg_AF->bits() = 0x0100;
+    reg_BC->bits() = 0x0013;
+    reg_DE->bits() = 0x00D8;
+    reg_HL->bits() = 0x014D;
+    
+    sound_ctrl_reg->bits() = 0xFF;
 }
 
 
