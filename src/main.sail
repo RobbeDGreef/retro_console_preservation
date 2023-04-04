@@ -6,7 +6,7 @@ $include "types.sail"
 $include "exceptions.sail"
 $include "utils.sail"
 $include "memory.sail"
-$include "instructions.sail"
+$include "instructions.sail" 
 
 /* Code */
 function fetch_and_execute(prev_instruction): (bool) -> bool = {
@@ -14,15 +14,24 @@ function fetch_and_execute(prev_instruction): (bool) -> bool = {
     let instruction = read(PC);
 
     let inst_pc = unsigned(PC);
-    
+
     PC = PC + 1;
 
     /* Check whether we successfully decoded our instruction, if not stop looping */
     let decoded = decode(instruction);
 
+    /* Print assembly */
+    match decoded {
+        Some(ast) => {
+            let asm = assembly(ast);
+            print_instruction(inst_pc, asm);
+        },
+        None() => print("invalid instruction")
+    };
+
     let loop_again : bool = match decoded {
-      Some(ast) => execute(ast),
-      None() => { print("invalid instruction"); false }
+        Some(ast) => execute(ast),
+        None() => { print("invalid instruction"); false }
     };
 
     //print_cpu_state();
