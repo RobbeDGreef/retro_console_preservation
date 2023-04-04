@@ -10,16 +10,16 @@ type dword = bits(dword_size)
 /* registers */
 
 bitfield dreg : dword = {
-    higher: 15 .. 8,
-    lower: 7 .. 0
+    lower: 7 .. 0,
+    higher: 15 .. 8
 }
 
 bitfield acc_flags : dword = {
     higher: 15 .. 8,
-    z: 7,
-    n: 6,
+    c: 4,
     h: 5,
-    c: 4
+    n: 6,
+    z: 7
 }
 
 register PC : dword
