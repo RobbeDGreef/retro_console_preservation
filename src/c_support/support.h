@@ -20,4 +20,8 @@ void custom_read_ram(lbits *data,
 					 const mpz_t data_size_mpz,
 					 const lbits hex_ram,
 					 const lbits addr_bv);
+
+unit print_instruction(const sail_int addr, const sail_string assembly);
+unit print_string(sail_string s1, sail_string s2);
+
 #endif /* __SUPPORT_H */
