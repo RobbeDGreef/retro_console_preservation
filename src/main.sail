@@ -62,10 +62,7 @@ function setup (): unit -> unit = {
     reg_BC->bits() = 0x0013;
     reg_DE->bits() = 0x00D8;
     reg_HL->bits() = 0x014D;
-    
-    sound_ctrl_reg->bits() = 0xFF;
 }
-
 
 function main () : unit -> unit = {
     setup();
