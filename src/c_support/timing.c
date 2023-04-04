@@ -5,6 +5,7 @@
 
 unit sleep_micro(const sail_int micros) {
     usleep(mpz_get_ui(micros));
+    return UNIT;
 }
 
 void get_time_micro(sail_int *rop, unit u) {

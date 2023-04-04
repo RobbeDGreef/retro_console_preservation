@@ -213,4 +213,6 @@ unit debug_hook(unit u)
 
     while (console())
         ;
+    
+    return UNIT;
 }

@@ -166,6 +166,8 @@ static void *dma_oam_transfer(void *arg)
 	pthread_spin_lock(&g_dma_transfer_busy_lock);
 	g_dma_transfer_busy = false;
 	pthread_spin_unlock(&g_dma_transfer_busy_lock);
+
+	return NULL;
 }
 
 static void io_write_oam_dma_start(uint64_t addr, int byte_count, uint64_t val)
