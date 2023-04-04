@@ -8,7 +8,7 @@ $include "memory.sail"
 $include "instructions.sail"
 
 /* Code */
-function fetch_and_execute(): unit -> bool = {
+function fetch_and_execute(prev_instruction): (bool) -> bool = {
     let start_micro = get_time_micro();
     let instruction = MEMr(PC);
 
@@ -30,11 +30,13 @@ function fetch_and_execute(): unit -> bool = {
     // Todo: better way to do this?
     match decoded {
         Some(ast) => {
-            let cycles = get_cycles_per_instruction(ast);
-            let micros_per_cycle = 4; // todo: move to global constant;
+            var cycles = get_cycles_per_instruction(ast);
+            if (prev_instruction) then
+                cycles = cycles - 4;
+            
             let real_duration = (get_time_micro() - start_micro);
             let ms_to_wait = cycles * micros_per_cycle - real_duration;
-            sleep_micro(ms_to_wait);
+            sleep_micro(real_duration);
         }
     };
     
@@ -43,8 +45,11 @@ function fetch_and_execute(): unit -> bool = {
 }
 
 function cpu_loop () : unit -> unit = {
-    while (fetch_and_execute()) do
-        ();
+    /* The first cpu cycle doesnt have a previous instruction */
+    // Q(Robbe):is there a better way to handle this
+    let useless = fetch_and_execute(false);
+    while (fetch_and_execute(true)) do
+        debug_hook();
 }
 
 function setup (): unit -> unit = {
