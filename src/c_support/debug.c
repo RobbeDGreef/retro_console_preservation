@@ -54,7 +54,7 @@ enum commands
     EXAMINE_MEM
 };
 
-int g_prev_command = NOP;
+int g_prev_command = CONTINUE;
 
 /* Normally I would create a list or something but this will do for now */
 int breakpoints[MAX_BREAKPOINTS] = {
