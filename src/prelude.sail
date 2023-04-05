@@ -32,6 +32,7 @@ val string_drop = "string_drop" : (string, nat) -> string
 val string_take = "string_take" : (string, nat) -> string
 
 overload ~ = {not_bool, not_vec, not_bit}
+val not = pure {coq:"negb", _:"not"} : bool -> bool
 
 /* C stuff */
 

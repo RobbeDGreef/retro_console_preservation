@@ -40,8 +40,8 @@ function fetch_and_execute(prev_instruction): (bool) -> bool = {
     match decoded {
         Some(ast) => {
             var cycles = get_cycles_per_instruction(ast);
-            if (prev_instruction) then
-                cycles = cycles - 4;
+            if (not(prev_instruction)) then
+                cycles = cycles + 4; 
             
             let real_duration = (get_time_micro() - start_micro);
             let ms_to_wait = cycles * micros_per_cycle - real_duration;
