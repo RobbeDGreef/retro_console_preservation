@@ -20,6 +20,7 @@ enum ram_range
 io_read_handler_t g_read_handlers[IO_LENGTH] = {0};
 io_write_handler_t g_write_handlers[IO_LENGTH] = {0};
 
+pthread_mutex_t g_memory_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_spinlock_t g_dma_transfer_busy_lock;
 bool g_dma_transfer_busy = false;
 
@@ -45,6 +46,17 @@ io_write_handler_t get_io_write_handler(uint64_t addr)
 {
 	assert(addr >= IO_BASE && addr < IO_BASE + IO_LENGTH);
 	return g_write_handlers[addr - IO_BASE];
+}
+
+void memory_copy(void* dst, uint64_t addr, int bytecount)
+{
+	char* dest = (char*) dst;
+	pthread_mutex_lock(&g_memory_lock);
+	for (int i = 0; i < bytecount; i++)
+	{
+		dest[i] = read_mem(addr++);
+	}
+	pthread_mutex_unlock(&g_memory_lock);
 }
 
 inline static enum ram_range get_ram_range(uint64_t addr)
@@ -107,7 +119,9 @@ void custom_read_ram(lbits *data,
 		break;
 	}
 
+	pthread_mutex_lock(&g_memory_lock);
 	read_ram(data, addr_size, data_size_mpz, hex_ram, addr_bv);
+	pthread_mutex_unlock(&g_memory_lock);
 }
 
 bool custom_write_ram(const mpz_t addr_size,	 // unused
@@ -143,7 +157,9 @@ bool custom_write_ram(const mpz_t addr_size,	 // unused
 		break;
 	}
 
-	return write_ram(addr_size, data_size_mpz, hex_ram, addr_bv, data);
+	pthread_mutex_lock(&g_memory_lock);
+	bool ret = write_ram(addr_size, data_size_mpz, hex_ram, addr_bv, data);
+	pthread_mutex_unlock(&g_memory_lock);
 }
 
 static void *dma_oam_transfer(void *arg)

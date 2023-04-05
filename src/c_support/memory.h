@@ -23,5 +23,6 @@ io_read_handler_t get_io_read_handler(uint64_t addr);
 io_write_handler_t get_io_write_handler(uint64_t addr);
 
 void memory_init();
+void memory_copy(void* dst, uint64_t addr, int bytecount);
 
 #endif 

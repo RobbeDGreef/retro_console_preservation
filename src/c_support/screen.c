@@ -89,21 +89,8 @@ static void update_events()
 
 static void copy_vram_and_oam()
 {
-    int i = 0;
-
-    for (int addr = VRAM_BASE; addr < VRAM_BASE + VRAM_LENGTH; addr += 1)
-    {
-        // todo: urgent: I'm reasonably sure this can cause a race condition crash when the sail thread were to write to this memory, I should synchronize the two.
-        g_vram[i] = read_mem(addr);
-        i++;
-    }
-
-    i = 0;
-    for (int addr = OAM_BASE; addr < OAM_BASE + OAM_LENGTH; addr += 1)
-    {
-        g_oam[i] = read_mem(addr);
-        i++;
-    }
+    memory_copy(g_vram, VRAM_BASE, VRAM_LENGTH);
+    memory_copy(g_oam, OAM_BASE, OAM_LENGTH);   
 }
 
 static uint8_t *get_tile_map()
@@ -221,6 +208,7 @@ static void draw_screen(unsigned long start_time)
         pthread_spin_unlock(&g_vscan_lock);
 
         unsigned long scanline_duration = (micros() - scan_start);
+    
         if (scanline_duration < time_per_frame)
             usleep(time_per_frame - scanline_duration);
     }
@@ -252,6 +240,7 @@ void *screen_loop(void *arg)
         unsigned long duration = micros() - start;
         if (duration < FRAME_DURATION)
             usleep(FRAME_DURATION - duration);
+        
     }
     return NULL;
 }
