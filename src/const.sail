@@ -1,1 +1,1 @@
-let micros_per_cycle = 4
+let micros_per_cycle = 1
