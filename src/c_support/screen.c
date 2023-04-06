@@ -61,7 +61,7 @@ uint8_t g_oam[OAM_LENGTH] = {0};
 pthread_spinlock_t g_vscan_lock;
 int g_vscan = 0;
 int g_hscan = 0;
-uint32_t g_screen_buffer[TILEMAP_WIDTH * TILEMAP_HEIGHT];
+uint32_t g_screen_buffer[VIRT_SCREEN_WIDTH * VIRT_SCREEN_HEIGHT];
 uint8_t g_lcd_control = BG_WINDOW_PRIORITY_ENABLE | BG_WINDOW_TILE_DATA_AREA_8000 | LCD_AND_PPU_ENABLE;
 
 static void stop_sdl()
@@ -131,7 +131,13 @@ static void draw_tile(int x, int y, uint8_t *tile)
 
             /* We need to invert the tiles on the X axis for some reason */
             int x_inverted = x + (TILE_WIDTH - 1 - j);
-            g_screen_buffer[(y + i) * TILEMAP_WIDTH + x_inverted] = color;
+            int y_loc = (y + i);
+            
+            /* todo there is a more efficient way to solve this but this works for now */
+            /* Check if we would write out of bounds */
+            if (y_loc < 0 || x_inverted < 0 || y_loc >= VIRT_SCREEN_WIDTH || x_inverted >= VIRT_SCREEN_WIDTH) continue;
+
+            g_screen_buffer[y_loc * TILEMAP_WIDTH + x_inverted] = color;
         }
     }
 }
