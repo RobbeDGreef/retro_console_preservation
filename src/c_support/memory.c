@@ -7,7 +7,7 @@
 #include "memory.h"
 #include "timing.h"
 
-#define DMA_DURATION 152
+#define DMA_CYCLE_DURATION (160*4 + 8)
 
 enum ram_range
 {
@@ -21,7 +21,6 @@ io_read_handler_t g_read_handlers[IO_LENGTH] = {0};
 io_write_handler_t g_write_handlers[IO_LENGTH] = {0};
 
 pthread_mutex_t g_memory_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_spinlock_t g_dma_transfer_busy_lock;
 bool g_dma_transfer_busy = false;
 
 void register_io_read_handler(uint64_t addr, io_read_handler_t handler)
@@ -48,9 +47,9 @@ io_write_handler_t get_io_write_handler(uint64_t addr)
 	return g_write_handlers[addr - IO_BASE];
 }
 
-void memory_copy(void* dst, uint64_t addr, int bytecount)
+void memory_copy(void *dst, uint64_t addr, int bytecount)
 {
-	char* dest = (char*) dst;
+	char *dest = (char *)dst;
 	pthread_mutex_lock(&g_memory_lock);
 	for (int i = 0; i < bytecount; i++)
 	{
@@ -106,14 +105,11 @@ void custom_read_ram(lbits *data,
 	case OAM:
 		// During OAM DMA transfer we should return 0xFF
 		// todo: actually, all of ram except for "high ram" isn't useable during DMA transfer, I however dont know how the CPU would act if you were to access it, for this reason I just assume programs are nice and dont touch ram at that time, that way I dont have to emulate it.
-		pthread_spin_lock(&g_dma_transfer_busy_lock);
 		if (g_dma_transfer_busy)
 		{
-			pthread_spin_unlock(&g_dma_transfer_busy_lock);
 			mpz_set_ui(*data->bits, 0xFF); /* Return 0xFF if dma transfer is busy */
 			return;
 		}
-		pthread_spin_unlock(&g_dma_transfer_busy_lock);
 		break;
 	default:
 		break;
@@ -160,9 +156,10 @@ bool custom_write_ram(const mpz_t addr_size,	 // unused
 	pthread_mutex_lock(&g_memory_lock);
 	bool ret = write_ram(addr_size, data_size_mpz, hex_ram, addr_bv, data);
 	pthread_mutex_unlock(&g_memory_lock);
+	return ret;
 }
 
-static void *dma_oam_transfer(void *arg)
+static void dma_oam_transfer(void *arg)
 {
 	uint64_t val = (uint64_t)arg;
 	uint64_t source = val << 8;
@@ -170,34 +167,25 @@ static void *dma_oam_transfer(void *arg)
 
 	unsigned long start = micros();
 
+	pthread_mutex_lock(&g_memory_lock);
 	for (int i = 0; i < OAM_LENGTH; i++)
 	{
 		uint64_t byte = read_mem(source++);
 		write_mem(destination++, byte);
 	}
+	pthread_mutex_unlock(&g_memory_lock);
 
-	/* Sleep the rest of the transfer */
-	usleep(DMA_DURATION - (micros() - start));
-
-	pthread_spin_lock(&g_dma_transfer_busy_lock);
 	g_dma_transfer_busy = false;
-	pthread_spin_unlock(&g_dma_transfer_busy_lock);
-
-	return NULL;
 }
 
 static void io_write_oam_dma_start(uint64_t addr, int byte_count, uint64_t val)
 {
-	pthread_spin_lock(&g_dma_transfer_busy_lock);
 	g_dma_transfer_busy = true;
-	pthread_spin_unlock(&g_dma_transfer_busy_lock);
 
-	pthread_t thread;
-	pthread_create(&thread, NULL, dma_oam_transfer, (void *)val);
+	register_cycle_timing_callback(DMA_CYCLE_DURATION, dma_oam_transfer, (void *)val);
 }
 
 void memory_init()
 {
-	pthread_spin_init(&g_dma_transfer_busy_lock, 0);
 	register_io_write_handler(0xFF46, io_write_oam_dma_start);
 }
