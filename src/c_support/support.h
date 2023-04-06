@@ -24,4 +24,6 @@ void custom_read_ram(lbits *data,
 unit print_instruction(const sail_int addr, const sail_string assembly);
 unit print_string(sail_string s1, sail_string s2);
 
+unit cycle_timer_update();
+
 #endif /* __SUPPORT_H */

@@ -60,3 +60,6 @@ val print_int = pure {
   c: "print_int"
 } : (string, int) -> unit
 
+val cycle_timer_update = pure {
+  c: "cycle_timer_update"
+} : (unit) -> unit
