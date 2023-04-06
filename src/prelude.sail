@@ -55,3 +55,8 @@ val print_instruction = pure {
 val print_string = pure {
   c: "print_string"
 } : (string, string) -> unit
+
+val print_int = pure {
+  c: "print_int"
+} : (string, int) -> unit
+
