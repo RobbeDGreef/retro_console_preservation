@@ -1,3 +1,4 @@
+register passed_cycles : int = 0
 register timing_excess : int = 0
 
 val accuracte_sleep_ms : (int) -> unit
@@ -41,3 +42,8 @@ function timing_sleep_cycles(cycles, start_micro) = {
     accuracte_sleep_ms(duration);
 }
 
+val timing_add_cycles : (int) -> unit 
+function timing_add_cycles(amount) = {
+    passed_cycles = passed_cycles + amount;
+    cycle_timer_update();
+}
