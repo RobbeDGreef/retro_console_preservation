@@ -4,50 +4,64 @@ $include "prelude.sail"
 $include "const.sail"
 $include "types.sail"
 $include "exceptions.sail"
+$include "timing.sail"
 $include "utils.sail"
 $include "memory.sail"
 $include "instructions.sail" 
 
+val cycle_write = {
+    c: "cycle_write"
+} : (string, int, int) -> unit
+
 /* Code */
 function fetch_and_execute(prev_instruction): (bool) -> bool = {
     let start_micro = get_time_micro();
+
     let instruction = read(PC);
 
     let inst_pc = unsigned(PC);
 
     PC = PC + 1;
 
-    /* Check whether we successfully decoded our instruction, if not stop looping */
+    /* Store the passed cycles before the instruction */
+    let cycles_before = passed_cycles;
+
+    /* Decode instruction */
     let decoded = decode(instruction);
 
     /* Print assembly */
-    match decoded {
-        Some(ast) => {
-            let asm = assembly(ast);
-            print_instruction(inst_pc, asm);
-        },
-        None() => print("invalid instruction")
+    let asm : string = match decoded {
+        Some(ast) => assembly(ast),
+        None(ast) => {throw error_internal_error(); "unknown instruction"}
+    };
+    print_instruction(inst_pc, asm);
+
+    
+    /* Fetch the amount of cycles the instruction should take */
+    var cycles : int = match(decoded) {
+        Some(ast) => get_cycles_per_instruction(ast)
     };
 
+    /* Fetch execute overlap handling */
+    if (not(prev_instruction)) then {
+        cycles = cycles + g_fetch_duration;
+        timing_add_cycles(g_fetch_duration);
+    };
+
+    /* Execute instruction */
     let loop_again : bool = match decoded {
-        Some(ast) => execute(ast),
-        None() => { print("invalid instruction"); false }
+        Some(ast) => execute(ast)
+    };
+
+    /* Make sure the updated cycles is correct with the amount of cycles that should have passed */
+    if (passed_cycles - cycles_before != cycles) then {
+        throw error_cycles_incorrectly_updated(asm, cycles, passed_cycles - cycles_before)
     };
 
     //print_cpu_state();
 
-    // Todo: better way to do this?
-    match decoded {
-        Some(ast) => {
-            var cycles = get_cycles_per_instruction(ast);
-            if (not(prev_instruction)) then
-                cycles = cycles + 4; 
-            
-            let real_duration = (get_time_micro() - start_micro);
-            let ms_to_wait = cycles * micros_per_cycle - real_duration;
-            sleep_micro(real_duration);
-        }
-    };
+    /* Finally the acutal sleep */
+    timing_sleep_cycles(cycles, start_micro);
 
     return loop_again;
 }
@@ -74,7 +88,7 @@ function setup (): unit -> unit = {
 
 function main () : unit -> unit = {
     setup();
-    
+
     /**
      * pass in binary using flags
      * flag: "binary"
@@ -84,6 +98,11 @@ function main () : unit -> unit = {
         cpu_loop()
     } catch {
         error_not_implemented(s) => print_string("Error: Not implemented: ", s),
-        error_internal_error() => print("Error: internal error")
+        error_internal_error() => print("Error: internal error"),
+        error_cycles_incorrectly_updated(asm, correct_cycles, actual_passed_cycles) => {
+            print_string("Incorrect amount of cycles passed in instruction ", asm);
+            print_int("correct cycles: ", correct_cycles);
+            print_int("actually passed: ", actual_passed_cycles);
+        }
     };
 }
