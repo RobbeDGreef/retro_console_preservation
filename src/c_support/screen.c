@@ -9,7 +9,8 @@
 #include "debug.h"
 #include "timing.h"
 
-#define FAKE_VLINE 0
+#define DBG_FAKE_VLINE 0
+#define DBG_DISPLAY_TILES_ONLY 0
 
 #define REAL_SCREEN_WIDTH 160
 #define REAL_SCREEN_HEIGHT 144
@@ -157,6 +158,8 @@ static void draw_screen(unsigned long start_time)
 {
     SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 255);
 
+
+#if !(DBG_DISPLAY_TILES_ONLY)
     uint8_t *tilemap = get_tile_map();
 
     /* Drawing the background */
@@ -164,7 +167,7 @@ static void draw_screen(unsigned long start_time)
     {
         for (int x = 0; x < TILEMAP_WIDTH / TILE_WIDTH; x++)
         {
-            int tile_idx = tilemap[(TILEMAP_WIDTH / TILE_WIDTH) * y + x];
+            int tile_idx = (int8_t) tilemap[(TILEMAP_WIDTH / TILE_WIDTH) * y + x];
             draw_tile(x * TILE_WIDTH, y * TILE_WIDTH, get_tile(tile_idx, 0));
         }
     }
@@ -179,6 +182,28 @@ static void draw_screen(unsigned long start_time)
         if (sprite.tile_index != 0)
             draw_tile(sprite.x_pos - 8, sprite.y_pos - 16, get_tile(sprite.tile_index, 1));
     }
+#else
+    int x = 0;
+    int y = 0;
+    int non_empty = 0;
+    for (int i = 0; i < 128; i++)
+    {
+        uint8_t* tile = get_tile(i, 1);
+        if (*tile != 0) {
+            non_empty++;
+        }
+        draw_tile(x, y, tile);
+        x += 8;
+
+        if (x >= REAL_SCREEN_WIDTH)
+        {
+            y += 8;
+            x = 0;
+        }
+    }
+
+#endif
+
 
     pthread_spin_trylock(&g_vscan_lock);
     g_vscan = 0;
