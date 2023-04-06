@@ -106,7 +106,7 @@ static uint8_t *get_bg_win_tile_data()
     if (g_lcd_control & BG_WINDOW_TILE_DATA_AREA_8000)
         return &g_vram[0x8000 - VRAM_BASE];
     else
-        return &g_vram[0x8800 - VRAM_BASE];
+        return &g_vram[0x9000 - VRAM_BASE];
 }
 
 static void draw_tile(int x, int y, uint8_t *tile)
