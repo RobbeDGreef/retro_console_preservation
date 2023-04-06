@@ -51,7 +51,8 @@ enum commands
     EXIT,
     DELETE_BREAKPOINT,
     HELP,
-    EXAMINE_MEM
+    EXAMINE_MEM,
+    ADD_BREAKPOINT,
 };
 
 int g_prev_command = CONTINUE;
@@ -96,6 +97,19 @@ static void delete_breakpoint(int breakpoint)
     breakpoints[breakpoint] = 0;
 }
 
+static void add_breakpoint(int addr)
+{
+    int i;
+    for (i = 0; i < MAX_BREAKPOINTS; i++)
+    {
+        if (!breakpoints[i] == 0)
+            break;
+    }
+
+    breakpoints[i] = addr;
+    printf("Created breakpoint #%i at %x\n", i, addr);
+}
+
 static void examine_memory(int mem)
 {
     printf("%04X: %04X (%d)\n", mem, read_mem(mem));
@@ -112,6 +126,9 @@ static int console()
     fgets(input, MAX_INP, stdin);
 
     input[strlen(input) - 1] = '\0'; /* Remove trailing newline */
+
+    if (g_prev_command == NEXT)
+        print_registers();
 
     int cmd = NOP;
 
@@ -146,6 +163,10 @@ static int console()
     else if (strncmp(input, "x", 1) == 0)
     {
         cmd = EXAMINE_MEM;
+    }
+    else if (strncmp(input, "b", 1) == 0)
+    {
+        cmd = ADD_BREAKPOINT;
     }
     else
     {
@@ -195,6 +216,16 @@ static int console()
 
         delete_breakpoint(atoi(input + 2));
         return LOOP_AGAIN;
+    case ADD_BREAKPOINT:
+        if (strlen(input) < 2 || strtol(input + 2, NULL, 0) == 0)
+        {
+            printf("ERROR, please specify a location to break on");
+            return LOOP_AGAIN;
+        }
+
+        add_breakpoint(strtol(input + 2, NULL, 0));
+        return LOOP_AGAIN;
+    
     }
 
     return LOOP_AGAIN;
