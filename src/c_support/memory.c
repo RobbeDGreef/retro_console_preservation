@@ -7,7 +7,7 @@
 #include "memory.h"
 #include "timing.h"
 
-#define DMA_CYCLE_DURATION (160*4 + 8)
+#define FAIL_IF_UNKNOWN_IO 0
 
 enum ram_range
 {
@@ -91,7 +91,7 @@ void custom_read_ram(lbits *data,
 			mpz_set_ui(*data->bits, val);
 			return;
 		}
-#ifdef DEBUG
+#if FAIL_IF_UNKNOWN_IO
 		else
 		{
 			printf("unknown io register: %x\n", addr);
@@ -138,7 +138,7 @@ bool custom_write_ram(const mpz_t addr_size,	 // unused
 			get_io_write_handler(addr)(addr, data_size, mpz_get_ui(*data.bits));
 			return true;
 		}
-#ifdef DEBUG
+#if FAIL_IF_UNKNOWN_IO
 		else
 		{
 			printf("unknown io register write: %x\n", addr);

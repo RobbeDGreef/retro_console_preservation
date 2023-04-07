@@ -13,6 +13,8 @@
 #define VRAM_LENGTH 0x2000
 #define WRAM_BASE 0xC000
 
+#define UNUSED_IO_ADDR(addr) register_io_read_handler(addr, io_read_unused);register_io_write_handler(addr, io_write_unused)
+
 typedef uint64_t (*io_read_handler_t)(uint64_t, int);
 typedef void (*io_write_handler_t)(uint64_t, int, uint64_t);
 
