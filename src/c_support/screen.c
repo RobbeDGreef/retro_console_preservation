@@ -205,7 +205,7 @@ static void draw_screen(unsigned long start_time)
 #endif
 
 
-    pthread_spin_trylock(&g_vscan_lock);
+    pthread_spin_lock(&g_vscan_lock);
     g_vscan = 0;
     pthread_spin_unlock(&g_vscan_lock);
 
@@ -234,7 +234,7 @@ static void draw_screen(unsigned long start_time)
             SDL_RenderDrawPoint(g_renderer, g_hscan, g_vscan);
         }
 
-        pthread_spin_trylock(&g_vscan_lock);
+        pthread_spin_lock(&g_vscan_lock);
         g_vscan++;
         pthread_spin_unlock(&g_vscan_lock);
 
