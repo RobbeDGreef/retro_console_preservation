@@ -53,7 +53,7 @@ void get_time_micro(sail_int *rop, unit u)
 /**
  * Get the amount of passed cycles from the timing.sail file. 
  */
-static int get_passed_cycles()
+unsigned long get_passed_cycles()
 {
     return mpz_get_ui(PASSED_CYCLES);
 }
