@@ -343,4 +343,10 @@ void screen_init()
     register_io_read_handler(0xFF41, io_read_lcd_stat);
     register_io_read_handler(0xFF40, io_read_lcd_control);
     register_io_write_handler(0xFF40, io_write_lcd_control);
+
+    UNUSED_IO_ADDR(0xFF42); /* SCY*/
+    UNUSED_IO_ADDR(0xFF43); /* SCX*/
+    UNUSED_IO_ADDR(0xFF4A); /* WY */
+    UNUSED_IO_ADDR(0xFF4B); /* WX */
+    UNUSED_IO_ADDR(0xFF47); /* Palette data */
 }
