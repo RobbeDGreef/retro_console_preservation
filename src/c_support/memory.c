@@ -189,3 +189,12 @@ void memory_init()
 {
 	register_io_write_handler(0xFF46, io_write_oam_dma_start);
 }
+
+void io_write_unused(uint64_t addr, int bytes, uint64_t val)
+{
+}
+
+uint64_t io_read_unused(uint64_t addr, int bytes)
+{
+	return 0;
+}
