@@ -7,6 +7,7 @@ int model_main(int argc, char *argv[]);
 int main(int argc, char *argv[])
 {
     memory_init();
+    timer_init();
     screen_init();
 
     pthread_t thread;
