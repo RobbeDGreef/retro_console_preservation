@@ -7,6 +7,8 @@
 #include "memory.h"
 #include "timing.h"
 
+#define DMA_CYCLE_DURATION (160 * 4 + 8)
+
 #define FAIL_IF_UNKNOWN_IO 0
 
 enum ram_range
