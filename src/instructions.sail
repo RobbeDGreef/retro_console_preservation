@@ -182,6 +182,8 @@ union clause ast = LDNNSP : (imm16) /* (nn)=SP */
 union clause ast = LDSPHL : (unit) /* SP=HL */
 union clause ast = LDAFF00NN : (imm8) /* read from io-port n (memory FF00+n) */
 union clause ast = LDFF00NNA : (imm8) /* write to io-port n (memory FF00+n) */
+union clause ast = LDAFF00C : (unit) /* read from io-port C (memory FF00+C) */
+union clause ast = LDFF00CA : (unit) /* write to io-port C (memory FF00+C) */
 union clause ast = PUSHRR : (dst16) /* SP=SP-2  (SP)=rr ; rr may be BC,DE,HL,AF */
 union clause ast = POPRR : (dst16) /* rr=(SP)  SP=SP+2 ; rr may be BC,DE,HL,AF */
 union clause ast = ADDAR : (dst) /* A=A+r */
@@ -345,6 +347,10 @@ function clause decode (0b11011001)
     = Some(RETI())
 function clause decode (0b11 @ r : rst_addr @ 0b111)
     = Some(RSTN(r))
+function clause decode (0b11110010)
+    = Some(LDAFF00C())
+function clause decode (0b11100010)
+    = Some(LDFF00CA())
 
 function clause decode (inst8) = {
     /* Reading the next instruction takes a cycle */
@@ -619,7 +625,10 @@ function clause assembly(LDSPHL()) = concat_str(concat_str("ld", concat_str("\t"
 /* SP=HL */
 function clause execute(LDSPHL()) = {
     /* todo: implement me */
-    throw(error_not_implemented("LDSPHL"));
+    timing_add_cycles(4);
+    let res = read_reg16(reg16_name(HL));
+    timing_add_cycles(4);
+    write_reg16(reg16_name(SP)) = res;
     true
 }
 function clause get_cycles_per_instruction(PUSHRR(rr)) = 16
@@ -983,9 +992,17 @@ function clause get_cycles_per_instruction(CPL()) = 4
 function clause assembly(CPL()) = "cpl"
 /* A = A xor FF */
 function clause execute(CPL()) = {
-    /* todo: implement me */
-    /* todo: flags -11- */
-    throw(error_not_implemented("CPL"));
+    timing_add_cycles(4);
+    let res = read_reg8(reg8_name(A)) ^ 0xFF;
+
+    set_flags(
+        flag_z(),
+        0b1,
+        0b1,
+        flag_c()
+    );
+    write_reg8(reg8_name(A)) = res;
+
     true
 }
 function clause get_cycles_per_instruction(ADDHLRR(rr)) = 8
@@ -1192,6 +1209,26 @@ function clause execute(LDAFF00NN(n)) = {
     timing_add_cycles(4);   
     true
 }
+function clause get_cycles_per_instruction(LDFF00CA(n)) = 8
+function clause assembly(LDFF00CA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00), "+C), A"))
+/* write to io-port C (memory FF00+C) */
+function clause execute(LDFF00CA()) = {
+    let res = read_reg8(reg8_name(A));
+    timing_add_cycles(4);
+    write(0xFF00 + EXTZ(read_reg8(reg8_name(C))), res);
+    timing_add_cycles(4);
+    true
+}
+function clause get_cycles_per_instruction(LDAFF00C(n)) = 8
+function clause assembly(LDAFF00C(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00), "+C)"))
+/* read from io-port n (memory FF00+n) */
+function clause execute(LDAFF00C(n)) = {
+    let res = read(0xFF00 + EXTZ(read_reg8(reg8_name(C))));
+    timing_add_cycles(4);
+    write_reg8(reg8_name(A)) = res;
+    timing_add_cycles(4);
+    true
+}
 function clause get_cycles_per_instruction(BITNR(n, r)) = 8
 function clause assembly(BITNR(n, r)) = concat_str(concat_str("bit", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
 /* test bit n */
@@ -1242,9 +1279,13 @@ function clause get_cycles_per_instruction(SCF()) = 4
 function clause assembly(SCF()) = "scf"
 /* cy=1 */
 function clause execute(SCF()) = {
-    /* todo: implement me */
-    /* todo: flags -001 */
-    throw(error_not_implemented("SCF"));
+    timing_add_cycles(4);
+    set_flags(
+        flag_z(),
+        0b0,
+        0b0,
+        0b1
+    );
     true
 }
 function clause get_cycles_per_instruction(NOP()) = 4
