@@ -255,8 +255,37 @@ static void update_screen(unsigned long start_time)
     SDL_RenderPresent(g_renderer);
 }
 
-void *screen_loop(void *arg)
+void sdl_start()
 {
+    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+    {
+        fprintf(stderr, "Could not init SDL: %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    g_screen = SDL_CreateWindow("Gameboy",
+                                SDL_WINDOWPOS_UNDEFINED,
+                                SDL_WINDOWPOS_UNDEFINED,
+                                REAL_SCREEN_WIDTH, REAL_SCREEN_HEIGHT,
+                                0);
+    if (!g_screen)
+    {
+        fprintf(stderr, "Could not create window\n");
+        exit(1);
+    }
+
+    g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_SOFTWARE);
+    if (!g_renderer)
+    {
+        fprintf(stderr, "Could not create renderer\n");
+        exit(1);
+    }
+}
+
+void *screen_start(void *arg)
+{
+    sdl_start();
+
     while (1)
     {
         unsigned long start = micros();
@@ -271,7 +300,6 @@ void *screen_loop(void *arg)
         unsigned long duration = micros() - start;
         if (duration < FRAME_DURATION)
             usleep(FRAME_DURATION - duration);
-        
     }
     return NULL;
 }
@@ -314,30 +342,6 @@ void screen_init()
 {
     // Init spinlock
     pthread_spin_init(&g_vscan_lock, 0);
-
-    if (SDL_Init(SDL_INIT_VIDEO) != 0)
-    {
-        fprintf(stderr, "Could not init SDL: %s\n", SDL_GetError());
-        exit(1);
-    }
-
-    g_screen = SDL_CreateWindow("Gameboy",
-                                SDL_WINDOWPOS_UNDEFINED,
-                                SDL_WINDOWPOS_UNDEFINED,
-                                REAL_SCREEN_WIDTH, REAL_SCREEN_HEIGHT,
-                                0);
-    if (!g_screen)
-    {
-        fprintf(stderr, "Could not create window\n");
-        exit(1);
-    }
-
-    g_renderer = SDL_CreateRenderer(g_screen, -1, SDL_RENDERER_SOFTWARE);
-    if (!g_renderer)
-    {
-        fprintf(stderr, "Could not create renderer\n");
-        exit(1);
-    }
 
     register_io_read_handler(0xFF44, io_read_lcd_y);
     register_io_read_handler(0xFF41, io_read_lcd_stat);

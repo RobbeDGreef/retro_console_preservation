@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     screen_init();
 
     pthread_t thread;
-    pthread_create(&thread, NULL, screen_loop, NULL);
+    pthread_create(&thread, NULL, screen_start, NULL);
 
     // Start the main sail code
     model_main(argc, argv);
