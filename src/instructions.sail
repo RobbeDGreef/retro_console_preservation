@@ -416,7 +416,7 @@ function clause decode16 (0b1100101111 @ d : imm3 @ r : regname)
     = Some(SETNR(d, r))
 function clause decode16 (0b1100101110 @ d : imm3 @ r : regname)
     = Some(RESNR(d, r))
-function clause decode16 (0b0000000000010000)
+function clause decode16 (0b0001000000000000)
     = Some(STOP())
 
 function clause decode16 (inst16) = {
