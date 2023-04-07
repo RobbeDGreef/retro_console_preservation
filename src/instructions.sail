@@ -128,7 +128,7 @@ function write_reg16_wAF(r, w) = {
         0b00 => reg_BC->bits() = w,
         0b01 => reg_DE->bits() = w,
         0b10 => reg_HL->bits() = w,
-        0b11 => reg_AF->bits() = w
+        0b11 => reg_AF->bits() = w & 0xFFF0 /* Bottom 4 bits of F are unwritable */
     };
 }
 
