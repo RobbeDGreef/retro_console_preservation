@@ -16,8 +16,11 @@ val cycle_write = {
 } : (string, int, int) -> unit
 
 /* Code */
+function fetch_decode_execute(prev_instruction): (bool) -> bool = {
     /* First try to execute an interrupt */
     check_for_interrupts();
+
+    let before_passed_cycles = passed_cycles;
     let start_micro = get_time_micro();
 
     let instruction = read(PC);
@@ -39,7 +42,9 @@ val cycle_write = {
     };
     print_instruction(inst_pc, asm);
 
-    
+    /* Call debugger hook before the instruction is executed */
+    debug_hook(inst_pc);
+
     /* Fetch the amount of cycles the instruction should take */
     var cycles : int = match(decoded) {
         Some(ast) => get_cycles_per_instruction(ast)
@@ -72,9 +77,9 @@ val cycle_write = {
 function cpu_loop () : unit -> unit = {
     /* The first cpu cycle doesnt have a previous instruction */
     // Q(Robbe):is there a better way to handle this
-    let useless = fetch_and_execute(false);
-    while (fetch_and_execute(true)) do
-        debug_hook();
+    let useless = fetch_decode_execute(false);
+    while (fetch_decode_execute(true)) do
+        ();
 }
 
 function setup (): unit -> unit = {

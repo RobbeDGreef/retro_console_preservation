@@ -46,11 +46,11 @@ val sleep_micro = pure {
 
 val debug_hook = pure {
   c: "debug_hook"
-} : unit -> unit
+} : (int) -> unit
 
 val print_instruction = pure {
   c: "print_instruction"
-} : (int, string) -> unit
+} : (int, string, int) -> unit
 
 val print_string = pure {
   c: "print_string"
