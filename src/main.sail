@@ -8,13 +8,16 @@ $include "timing.sail"
 $include "utils.sail"
 $include "memory.sail"
 $include "instructions.sail" 
+$include "interrupts.sail" 
+
 
 val cycle_write = {
     c: "cycle_write"
 } : (string, int, int) -> unit
 
 /* Code */
-function fetch_and_execute(prev_instruction): (bool) -> bool = {
+    /* First try to execute an interrupt */
+    check_for_interrupts();
     let start_micro = get_time_micro();
 
     let instruction = read(PC);
@@ -84,6 +87,10 @@ function setup (): unit -> unit = {
     reg_BC->bits() = 0x0013;
     reg_DE->bits() = 0x00D8;
     reg_HL->bits() = 0x014D;
+
+    interrupt_flag = 0x00;
+    interrupt_enable = 0x01;
+    interrupt_master = 0x01;
 }
 
 function main () : unit -> unit = {
