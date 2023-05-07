@@ -352,7 +352,7 @@ function clause decode (0b11100010)
 
 function clause decode (inst8) = {
     /* Reading the next instruction takes a cycle */
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let next : word = read(PC);
     PC = PC + 1;
 
@@ -419,7 +419,7 @@ function clause decode16 (0b0001000000000000)
 
 function clause decode16 (inst16) = {
     /* Reading the next instructions takes a cycle */
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let next : word = read(PC);
     PC = PC + 1;
 
@@ -476,9 +476,9 @@ function clause get_cycles_per_instruction(JPCNN(c, n)) = {
 }
 /* if c: PC = nn */
 function clause execute(JPCNN(c, nn)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     if condition_true(c) then { 
-        timing_add_cycles(4);
+        timing_tick_cycle();
         set_PC(nn);
     };
     true
@@ -488,7 +488,7 @@ function clause get_cycles_per_instruction(LDRR(r1, r2)) = 4
 function clause assembly(LDRR(r1, r2)) = concat_str(concat_str("ld", concat_str("\t", reg8_str(r1))), concat_str(", ", reg8_str(r2)))
 /* r=r */
 function clause execute(LDRR(r1, r2)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(r1) = read_reg8(r2);
     true
 }
@@ -496,7 +496,7 @@ function clause get_cycles_per_instruction(LDRN(r, n)) = 8
 function clause assembly(LDRN(r, n)) = concat_str(concat_str("ld", concat_str("\t", reg8_str(r))), concat_str(", ", bits_str(n)))
 /* r=n */
 function clause execute(LDRN(r, n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(r) = n;
     true
 }
@@ -504,9 +504,9 @@ function clause get_cycles_per_instruction(LDABC()) = 8
 function clause assembly(LDABC()) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", "(BC)"))
 /* A=(BC) */
 function clause execute(LDABC()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read(read_reg16(reg16_name(BC)));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = res;
     true
 }
@@ -514,9 +514,9 @@ function clause get_cycles_per_instruction(LDADE()) = 8
 function clause assembly(LDADE()) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", "(DE)"))
 /* A=(DE) */
 function clause execute(LDADE()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read(read_reg16(reg16_name(DE)));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = res;
     true
 }
@@ -524,9 +524,9 @@ function clause get_cycles_per_instruction(LDANN(nn)) = 16
 function clause assembly(LDANN(nn)) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", concat_str(concat_str("(", bits_str((nn))), ")")))
 /* A=(nn) */
 function clause execute(LDANN(nn)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read(nn);
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = res;
     true
 }
@@ -534,79 +534,79 @@ function clause get_cycles_per_instruction(LDBCA()) = 8
 function clause assembly(LDBCA()) = concat_str(concat_str("ld", concat_str("\t", "(BC)")), concat_str(", ", "A"))
 /* (BC)=A */
 function clause execute(LDBCA()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(read_reg16(reg16_name(BC)), read_reg8(reg8_name(A)));
     /* According to the docs now there is a cycle, but it doesn't specify what
      * it does? So I guess I'll just have an empty cycle here. This occurs multiple 
      * times when a write is done, I guess the CPU needs a cycle to reset the bus 
      * or something? */
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDDEA()) = 8
 function clause assembly(LDDEA()) = concat_str(concat_str("ld", concat_str("\t", "(DE)")), concat_str(", ", "A"))
 /* (DE)=A */
 function clause execute(LDDEA()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(read_reg16(reg16_name(DE)), read_reg8(reg8_name(A)));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDNNA(nn)) = 16
 function clause assembly(LDNNA(nn)) = concat_str(concat_str("ld", concat_str("\t", concat_str(concat_str("(", bits_str((nn))), ")"))), concat_str(", ", "A"))
 /* (nn)=A */
 function clause execute(LDNNA(nn)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(nn) = read_reg8(reg8_name(A));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDIHLA()) = 8
 function clause assembly(LDIHLA()) = concat_str(concat_str("ldi", concat_str("\t", "(HL)")), concat_str(", ", "A"))
 /* (HL)=A, HL=HL+1 */
 function clause execute(LDIHLA()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     /* Again, I find this one in particular very strange but the docs I found say this */
     write(read_reg16(reg16_name(HL))) = read_reg8(reg8_name(A));
     write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + 1;
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDIAHL()) = 8
 function clause assembly(LDIAHL()) = concat_str(concat_str("ldi", concat_str("\t", "A")), concat_str(", ", "(HL)"))
 /* A=(HL), HL=HL+1 */
 function clause execute(LDIAHL()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = read(read_reg16(reg16_name(HL)));
     write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + 1;
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDDHLA()) = 8
 function clause assembly(LDDHLA()) = concat_str(concat_str("ldd", concat_str("\t", "(HL)")), concat_str(", ", "A"))
 /* (HL)=A, HL=HL-1 */
 function clause execute(LDDHLA()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(read_reg16(reg16_name(HL))) = read_reg8(reg8_name(A));
     write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + -1;
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDDAHL()) = 8
 function clause assembly(LDDAHL()) = concat_str(concat_str("ldd", concat_str("\t", "A")), concat_str(", ", "(HL)"))
 /* A=(HL), HL=HL-1 */
 function clause execute(LDDAHL()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = read(read_reg16(reg16_name(HL)));
     write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + -1;
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDRRNN(rr, nn)) = 12
 function clause assembly(LDRRNN(rr, nn)) = concat_str(concat_str("ld", concat_str("\t", reg16_str(rr))), concat_str(", ", bits_str(nn)))
 /* rr=nn (rr may be BC,DE,HL or SP) */
 function clause execute(LDRRNN(rr, nn)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg16(rr) = nn;
     true
 }
@@ -615,11 +615,11 @@ function clause assembly(LDNNSP(nn)) = concat_str(concat_str("ld", concat_str("\
 /* (nn)=SP */
 function clause execute(LDNNSP(nn)) = {
     let sp = read_reg16(reg16_name(SP));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(nn) = truncate(sp, 8);
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(nn+1) = truncate((sp >> 8), 8);
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDSPHL()) = 8
@@ -627,9 +627,9 @@ function clause assembly(LDSPHL()) = concat_str(concat_str("ld", concat_str("\t"
 /* SP=HL */
 function clause execute(LDSPHL()) = {
     /* todo: implement me */
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg16(reg16_name(HL));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg16(reg16_name(SP)) = res;
     true
 }
@@ -638,17 +638,17 @@ function clause assembly(PUSHRR(rr)) = concat_str("push", concat_str("\t", reg16
 /* SP=SP-2  (SP)=rr ; rr may be BC,DE,HL,AF */
 function clause execute(PUSHRR(rr)) = {
     /* Cycle to put SP on the addr line */
-    timing_add_cycles(4);
+    timing_tick_cycle();
 
     /* Im pretty sure doing this in one go here is accurate enough */
     write_reg16(reg16_name(SP)) = read_reg16(reg16_name(SP)) + -2;
     let addr = read_reg16(reg16_name(SP));
 
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(addr + 1, truncate((read_reg16_wAF(rr) >> 8), 8));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(addr + 0, truncate(read_reg16_wAF(rr), 8));
-    timing_add_cycles(4);
+    timing_tick_cycle();
 
     true
 }
@@ -657,12 +657,12 @@ function clause assembly(POPRR(rr)) = concat_str("pop", concat_str("\t", reg16_w
 /* rr=(SP)  SP=SP+2 ; rr may be BC,DE,HL,AF */
 function clause execute(POPRR(rr)) = {
     let addr = read_reg16(reg16_name(SP));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let lsb = read(addr);
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let msb = read(addr + 1);
 
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg16_wAF(rr) = (EXTZ(msb) << 8) + EXTZ(lsb);
     write_reg16(reg16_name(SP)) = read_reg16(reg16_name(SP)) + 2;
 
@@ -688,7 +688,7 @@ function clause get_cycles_per_instruction(ADDAR(r)) = 4
 function clause assembly(ADDAR(r)) = concat_str(concat_str("add", concat_str("\t", "A")), concat_str(", ", reg8_str(r)))
 /* A=A+r */
 function clause execute(ADDAR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), read_reg8(r));
     true
 }
@@ -696,7 +696,7 @@ function clause get_cycles_per_instruction(ADDAN(n)) = 8
 function clause assembly(ADDAN(n)) = concat_str(concat_str("add", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
 /* A=A+n */
 function clause execute(ADDAN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), n);
     true
 }
@@ -720,7 +720,7 @@ function clause get_cycles_per_instruction(ADCAR(r)) = 4
 function clause assembly(ADCAR(r)) = concat_str(concat_str("adc", concat_str("\t", "A")), concat_str(", ", reg8_str(r)))
 /* A=A+r+cy */
 function clause execute(ADCAR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), read_reg8(r), EXTZ(flag_c()));
     true
 }
@@ -728,7 +728,7 @@ function clause get_cycles_per_instruction(ADCAN(n)) = 8
 function clause assembly(ADCAN(n)) = concat_str(concat_str("adc", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
 /* A=A+n+cy */
 function clause execute(ADCAN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), n, EXTZ(flag_c()));
     true
 }
@@ -736,7 +736,7 @@ function clause get_cycles_per_instruction(SUBR(r)) = 4
 function clause assembly(SUBR(r)) = concat_str("sub", concat_str("\t", reg8_str(r)))
 /* A=A-r */
 function clause execute(SUBR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), 0x00 - read_reg8(r));
     set_flags(
         flag_z(),
@@ -750,7 +750,7 @@ function clause get_cycles_per_instruction(SUBN(n)) = 8
 function clause assembly(SUBN(n)) = concat_str("sub", concat_str("\t", bits_str(n)))
 /* A=A-n */
 function clause execute(SUBN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), 0x00 - n);
     set_flags(
         flag_z(),
@@ -765,7 +765,7 @@ function clause get_cycles_per_instruction(SBCAR(r)) = 4
 function clause assembly(SBCAR(r)) = concat_str(concat_str("sbc", concat_str("\t", "A")), concat_str(", ", reg8_str(r)))
 /* A=A-r-cy */
 function clause execute(SBCAR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), 0x00 - read_reg8(r), 0x00 - EXTZ(flag_c()));
     set_flags(
         flag_z(),
@@ -779,7 +779,7 @@ function clause get_cycles_per_instruction(SBCAN(n)) = 8
 function clause assembly(SBCAN(n)) = concat_str(concat_str("sbc", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
 /* A=A-n-cy */
 function clause execute(SBCAN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), 0x00 - n, 0x00 - EXTZ(flag_c()));
     set_flags(
         flag_z(),
@@ -793,7 +793,7 @@ function clause get_cycles_per_instruction(ANDR(r)) = 4
 function clause assembly(ANDR(r)) = concat_str("and", concat_str("\t", reg8_str(r)))
 /* A=A & r */
 function clause execute(ANDR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A)) & read_reg8(r);
 
     set_flags(
@@ -810,7 +810,7 @@ function clause get_cycles_per_instruction(ANDN(n)) = 8
 function clause assembly(ANDN(n)) = concat_str("and", concat_str("\t", bits_str(n)))
 /* A=A & n */
 function clause execute(ANDN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A)) & n;
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
@@ -825,7 +825,7 @@ function clause get_cycles_per_instruction(XORR(r)) = 4
 function clause assembly(XORR(r)) = concat_str("xor", concat_str("\t", reg8_str(r)))
 /* A=A xor r */
 function clause execute(XORR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A)) ^ read_reg8(r);
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
@@ -840,7 +840,7 @@ function clause get_cycles_per_instruction(XORN(n)) = 8
 function clause assembly(XORN(n)) = concat_str("xor", concat_str("\t", bits_str(n)))
 /* A=A xor n */
 function clause execute(XORN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A)) ^ n;
 
     set_flags(
@@ -857,7 +857,7 @@ function clause get_cycles_per_instruction(ORR(r)) = 4
 function clause assembly(ORR(r)) = concat_str("or", concat_str("\t", reg8_str(r)))
 /* A=A \ */
 function clause execute(ORR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A)) | read_reg8(r);
     
     set_flags(
@@ -873,7 +873,7 @@ function clause get_cycles_per_instruction(ORN(n)) = 8
 function clause assembly(ORN(n)) = concat_str("or", concat_str("\t", bits_str(n)))
 /* A=A \ */
 function clause execute(ORN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A)) | n;
 
     set_flags(
@@ -889,7 +889,7 @@ function clause get_cycles_per_instruction(CPR(r)) = 4
 function clause assembly(CPR(r)) = concat_str("cp", concat_str("\t", reg8_str(r)))
 /* compare A-r */
 function clause execute(CPR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let useless = add(read_reg8(reg8_name(A)), 0x00 - read_reg8(r));
 
     set_flags(
@@ -906,7 +906,7 @@ function clause get_cycles_per_instruction(CPN(n)) = 8
 function clause assembly(CPN(n)) = concat_str("cp", concat_str("\t", bits_str(n)))
 /* compare A-n */
 function clause execute(CPN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let useless = add(read_reg8(reg8_name(A)), 0x00 - n);
 
     set_flags(
@@ -922,7 +922,7 @@ function clause get_cycles_per_instruction(INCR(r)) = 4
 function clause assembly(INCR(r)) = concat_str("inc", concat_str("\t", reg8_str(r)))
 /* r=r+1 */
 function clause execute(INCR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(r) + 1;
 
     set_flags(
@@ -939,7 +939,7 @@ function clause get_cycles_per_instruction(DECR(r)) = 4
 function clause assembly(DECR(r)) = concat_str("dec", concat_str("\t", reg8_str(r)))
 /* r=r-1 */
 function clause execute(DECR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(r) + -1;
 
     set_flags(
@@ -957,8 +957,8 @@ function clause assembly(ADDSPD(d)) = concat_str("add\tSP, ", bits_str(d))
 /* SP = SP +/- dd ; dd is 8-bit signed number */
 function clause execute(ADDSPD(d)) = {
     /* I am not yet sure if this is correct because I could not find docs */
-    timing_add_cycles(4);
-    timing_add_cycles(4);
+    timing_tick_cycle();
+    timing_tick_cycle();
     let res = read_reg16(reg16_name(SP)) + EXTS(d);    
     write_reg16(reg16_name(SP)) = res;
     
@@ -968,7 +968,7 @@ function clause execute(ADDSPD(d)) = {
         0b0, /* todo: h register */
         if signed(d) < 0 then 0b1 else 0b0
     );
-    timing_add_cycles(4);
+    timing_tick_cycle();
 
     true
 }
@@ -977,7 +977,7 @@ function clause get_cycles_per_instruction(LDHLSPDD(d)) = 12
 function clause assembly(LDHLSPDD(d)) = concat_str("ld\tHL, SP+", bits_str(d))
 /* HL = SP +/- dd ; dd is 8-bit signed number */
 function clause execute(LDHLSPDD(d)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
 
     write_reg16(reg16_name(HL)) = read_reg16(reg16_name(SP)) + EXTS(d);
     
@@ -988,7 +988,7 @@ function clause execute(LDHLSPDD(d)) = {
         if signed(d) < 0 then 0b1 else 0b0
     );
 
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 
@@ -996,7 +996,7 @@ function clause get_cycles_per_instruction(DAA()) = 4
 function clause assembly(DAA()) = "daa"
 /* decimal adjust A */
 function clause execute(DAA()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
 
     /* Code taken from mooneye-gb emulator (and converted to sail ofcourse) */
     var carry = 0b0;
@@ -1031,7 +1031,7 @@ function clause get_cycles_per_instruction(CPL()) = 4
 function clause assembly(CPL()) = "cpl"
 /* A = A xor FF */
 function clause execute(CPL()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A)) ^ 0xFF;
 
     set_flags(
@@ -1048,7 +1048,7 @@ function clause get_cycles_per_instruction(ADDHLRR(rr)) = 8
 function clause assembly(ADDHLRR(rr)) = concat_str(concat_str("add", concat_str("\t", "HL")), concat_str(", ", reg16_str(rr)))
 /* HL = HL+rr     ; rr may be BC,DE,HL,SP */
 function clause execute(ADDHLRR(rr)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     
     /* there must be a better way but this is an easy way to check for integer overflows */
     let large_res : bits(32) = EXTZ(read_reg16(reg16_name(HL))) + EXTZ(read_reg16(rr));
@@ -1061,16 +1061,16 @@ function clause execute(ADDHLRR(rr)) = {
     );
 
     write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + read_reg16(rr);
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(INCRR(rr)) = 8
 function clause assembly(INCRR(rr)) = concat_str("inc", concat_str("\t", reg16_str(rr)))
 /* rr = rr+1      ; rr may be BC,DE,HL,SP */
 function clause execute(INCRR(rr)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg16(rr) + 1;
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg16(rr) = res;
     true
 }
@@ -1078,9 +1078,9 @@ function clause get_cycles_per_instruction(DECRR(rr)) = 8
 function clause assembly(DECRR(rr)) = concat_str("dec", concat_str("\t", reg16_str(rr)))
 /* rr = rr-1      ; rr may be BC,DE,HL,SP */
 function clause execute(DECRR(rr)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg16(rr) + -1;
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg16(rr) = res;
     true
 }
@@ -1141,7 +1141,7 @@ function clause get_cycles_per_instruction(RLCR(r)) = 8
 function clause assembly(RLCR(r)) = concat_str("rlc", concat_str("\t", reg8_str(r)))
 /* rotate left */
 function clause execute(RLCR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let new_carry = truncate((read_reg8(r) >> 7) & 0x01, 1);
     let new_reg = (read_reg8(r) << 1);
     write_reg8(r) = new_reg;
@@ -1158,7 +1158,7 @@ function clause get_cycles_per_instruction(RLR(r)) = 8
 function clause assembly(RLR(r)) = concat_str("rl", concat_str("\t", reg8_str(r)))
 /* rotate left through carry */
 function clause execute(RLR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let new_carry = truncate(read_reg8(r) >> 7, 1);
     let new_reg = (read_reg8(r) << 1) | EXTZ(flag_c());
     write_reg8(r) = new_reg;
@@ -1175,7 +1175,7 @@ function clause get_cycles_per_instruction(RRCR(r)) = 8
 function clause assembly(RRCR(r)) = concat_str("rrc", concat_str("\t", reg8_str(r)))
 /* rotate right */
 function clause execute(RRCR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let new_carry = truncate(read_reg8(r), 1);
     let new_reg = (read_reg8(r) >> 1);
     write_reg8(r) = new_reg;
@@ -1192,7 +1192,7 @@ function clause get_cycles_per_instruction(RRR(r)) = 8
 function clause assembly(RRR(r)) = concat_str("rr", concat_str("\t", reg8_str(r)))
 /* rotate right through carry */
 function clause execute(RRR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let new_carry = truncate(read_reg8(r) & 0x01, 1);
     let new_reg = (read_reg8(r) >> 1) |  (EXTZ(flag_c()) << 7);
     write_reg8(r) = new_reg;
@@ -1209,7 +1209,7 @@ function clause get_cycles_per_instruction(SLAR(r)) = 8
 function clause assembly(SLAR(r)) = concat_str("sla", concat_str("\t", reg8_str(r)))
 /* shift left arithmetic (b0=0) */
 function clause execute(SLAR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let new_carry = truncate(read_reg8(r) >> 7, 1);
     let new_reg = (read_reg8(r) << 1);
     write_reg8(r) = new_reg;
@@ -1225,7 +1225,7 @@ function clause get_cycles_per_instruction(SWAPR(r)) = 8
 function clause assembly(SWAPR(r)) = concat_str("swap", concat_str("\t", reg8_str(r)))
 /* exchange low/hi-nibble */
 function clause execute(SWAPR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let low = read_reg8(r) & 0x0F;
     let high = (read_reg8(r) & 0xF0) >> 4;
     write_reg8(r) = (low << 4) | high;
@@ -1242,7 +1242,7 @@ function clause get_cycles_per_instruction(SRAR(r)) = 8
 function clause assembly(SRAR(r)) = concat_str("sra", concat_str("\t", reg8_str(r)))
 /* shift right arithmetic (b7=b7) */
 function clause execute(SRAR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let new_carry = truncate(read_reg8(r), 1);
     let new_reg = (read_reg8(r) >> 1) | (read_reg8(r) & 0x80);
     write_reg8(r) = new_reg;
@@ -1259,7 +1259,7 @@ function clause get_cycles_per_instruction(SRLR(r)) = 8
 function clause assembly(SRLR(r)) = concat_str("srl", concat_str("\t", reg8_str(r)))
 /* shift right logical (b7=0) */
 function clause execute(SRLR(r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(r) >> 1;
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
@@ -1274,8 +1274,8 @@ function clause get_cycles_per_instruction(JRNN(d)) = 12
 function clause assembly(JRNN(d)) = "JR    PC+nn"
 /* relative jump to nn (PC=PC+8-bit signed) */
 function clause execute(JRNN(d)) = {
-    timing_add_cycles(4);
-    timing_add_cycles(4);
+    timing_tick_cycle();
+    timing_tick_cycle();
     set_PC(PC + EXTS(d));
     true
 }
@@ -1285,9 +1285,9 @@ function clause get_cycles_per_instruction(JRCN(c, n)) = {
 function clause assembly(JRCN(c, n)) = concat_str("jr\t", concat_str(cond_str(c), concat_str(", PC+", concat_str(bits_str(n), concat_str("\t# ", bits_str(PC + EXTS(n)))))))
 /* conditional relative jump if nz,z,nc,c */
 function clause execute(JRCN(c, n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     if condition_true(c) then {
-        timing_add_cycles(4);
+        timing_tick_cycle();
         set_PC(PC + EXTS(n));
     };
 
@@ -1297,9 +1297,9 @@ function clause get_cycles_per_instruction(LDFF00NNA(n)) = 12
 function clause assembly(LDFF00NNA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00 + EXTZ(n)), "), A"))
 /* write to io-port n (memory FF00+n) */
 function clause execute(LDFF00NNA(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(0xFF00 + EXTZ(n), res);
     true
 }
@@ -1307,9 +1307,9 @@ function clause get_cycles_per_instruction(LDAFF00NN(n)) = 12
 function clause assembly(LDAFF00NN(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00 + EXTZ(n)), ")"))
 /* read from io-port n (memory FF00+n) */
 function clause execute(LDAFF00NN(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read(0xFF00 + EXTZ(n));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = res;
     true
 }
@@ -1317,9 +1317,9 @@ function clause get_cycles_per_instruction(LDFF00CA(n)) = 8
 function clause assembly(LDFF00CA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00), "+C), A"))
 /* write to io-port C (memory FF00+C) */
 function clause execute(LDFF00CA()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read_reg8(reg8_name(A));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(0xFF00 + EXTZ(read_reg8(reg8_name(C))), res);
     true
 }
@@ -1327,9 +1327,9 @@ function clause get_cycles_per_instruction(LDAFF00C(n)) = 8
 function clause assembly(LDAFF00C(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00), "+C)"))
 /* read from io-port n (memory FF00+n) */
 function clause execute(LDAFF00C(n)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let res = read(0xFF00 + EXTZ(read_reg8(reg8_name(C))));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(reg8_name(A)) = res;
     true
 }
@@ -1337,7 +1337,7 @@ function clause get_cycles_per_instruction(BITNR(n, r)) = 8
 function clause assembly(BITNR(n, r)) = concat_str(concat_str("bit", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
 /* test bit n */
 function clause execute(BITNR(n, r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let regval = read_reg8(r);
     let res = regval & (0x01 << n);
     set_flags(
@@ -1352,7 +1352,7 @@ function clause get_cycles_per_instruction(SETNR(d, r)) = 8
 function clause assembly(SETNR(n, r)) = concat_str(concat_str("set", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
 /* set bit n */
 function clause execute(SETNR(n, r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write_reg8(r) = read_reg8(r) | (0x01 << n);
     true
 }
@@ -1360,7 +1360,7 @@ function clause get_cycles_per_instruction(RESNR(n, r)) = 8
 function clause assembly(RESNR(n, r)) = concat_str(concat_str("res", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
 /* reset bit n */
 function clause execute(RESNR(n, r)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     
     write_reg8(r) = read_reg8(r) & ~(0x01 << n);
     true
@@ -1369,7 +1369,7 @@ function clause get_cycles_per_instruction(CCF()) = 4
 function clause assembly(CCF()) = "ccf"
 /* cy=cy xor 1 */
 function clause execute(CCF()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     
     set_flags(
         flag_z(),
@@ -1383,7 +1383,7 @@ function clause get_cycles_per_instruction(SCF()) = 4
 function clause assembly(SCF()) = "scf"
 /* cy=1 */
 function clause execute(SCF()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     set_flags(
         flag_z(),
         0b0,
@@ -1396,7 +1396,7 @@ function clause get_cycles_per_instruction(NOP()) = 4
 function clause assembly(NOP()) = "nop"
 /* no operation */
 function clause execute(NOP()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(HALT()) = /* todo */ 0
@@ -1418,7 +1418,7 @@ function clause get_cycles_per_instruction(DI()) = 4
 function clause assembly(DI()) = "di"
 /* disable interrupts, IME=0 */
 function clause execute(DI()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     interrupt_master = 0x00;
     true
 }
@@ -1426,7 +1426,7 @@ function clause get_cycles_per_instruction(EI()) = 4
 function clause assembly(EI()) = "ei"
 /* enable interrupts, IME=1 */
 function clause execute(EI()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     interrupt_master = 0x01;
     true
 }
@@ -1434,8 +1434,8 @@ function clause get_cycles_per_instruction(JPNN(nn)) = 16
 function clause assembly(JPNN(nn)) = concat_str("jp", concat_str("\t", bits_str(nn)))
 /* jump to nn, PC=nn */
 function clause execute(JPNN(nn)) = {
-    timing_add_cycles(4);
-    timing_add_cycles(4);
+    timing_tick_cycle();
+    timing_tick_cycle();
     set_PC(nn);
     true
 }
@@ -1443,7 +1443,7 @@ function clause get_cycles_per_instruction(JPHL()) = 4
 function clause assembly(JPHL()) = concat_str("jp", concat_str("\t", "HL"))
 /* jump to HL, PC=HL */
 function clause execute(JPHL()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     set_PC(read_reg16(reg16_name(HL)));
     true
 }
@@ -1459,16 +1459,16 @@ function clause get_cycles_per_instruction(CALLNN(nn)) = 24
 function clause assembly(CALLNN(nn)) = concat_str("call", concat_str("\t", bits_str(nn)))
 /* call to nn, SP=SP-2, (SP)=PC, PC=nn */
 function clause execute(CALLNN(nn)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
 
     let addr = read_reg16(reg16_name(SP)) + -2;
     write_reg16(reg16_name(SP)) = addr;
 
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(addr + 1, truncate((PC >> 8) & 0x00FF, 8));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(addr + 0, truncate(PC & 0x00FF, 8));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     set_PC(nn);
     true
 }
@@ -1482,7 +1482,7 @@ function clause execute(CALLFNN(c, nn)) = {
         execute(CALLNN(nn))
     else
     {
-        timing_add_cycles(4);
+        timing_tick_cycle();
         true
     }
 }
@@ -1490,18 +1490,18 @@ function clause get_cycles_per_instruction(RET()) = 16
 function clause assembly(RET()) = "ret"
 /* return, PC=(SP), SP=SP+2 */
 function clause execute(RET()) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let addr = read_reg16(reg16_name(SP));
     let lsb = read(addr);
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let msb = read(addr + 1);
     
     write_reg16(reg16_name(SP)) = addr + 2;
     
-    timing_add_cycles(4);
+    timing_tick_cycle();
     set_PC(EXTZ(msb) << 8 + EXTZ(lsb));
     
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(RETF(c)) = {
@@ -1510,12 +1510,12 @@ function clause get_cycles_per_instruction(RETF(c)) = {
 function clause assembly(RETF(c)) = concat_str("ret\t", cond_str(c))
 /* conditional return if nz,z,nc,c */
 function clause execute(RETF(c)) = {
-    timing_add_cycles(4);
+    timing_tick_cycle();
     if condition_true(c) then 
         execute(RET())
     else
     {
-        timing_add_cycles(4);
+        timing_tick_cycle();
         true
     }
 }
@@ -1523,19 +1523,19 @@ function clause get_cycles_per_instruction(RETI()) = 16
 function clause assembly(RETI()) = "reti"
 /* return and enable interrupts (IME=1) */
 function clause execute(RETI()) = {    
-    timing_add_cycles(4);
+    timing_tick_cycle();
     interrupt_master = 0x01;
     let addr = read_reg16(reg16_name(SP));
     let lsb = read(addr);
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let msb = read(addr + 1);
     
     write_reg16(reg16_name(SP)) = addr + 2;
     
-    timing_add_cycles(4);
+    timing_tick_cycle();
     set_PC(EXTZ(msb) << 8 + EXTZ(lsb));
     
-    timing_add_cycles(4);
+    timing_tick_cycle();
     true
 
 }

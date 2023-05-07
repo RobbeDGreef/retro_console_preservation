@@ -42,8 +42,8 @@ function timing_sleep_cycles(cycles, start_micro) = {
     accuracte_sleep_ms(duration);
 }
 
-val timing_add_cycles : (int) -> unit 
-function timing_add_cycles(amount) = {
-    passed_cycles = passed_cycles + amount;
+val timing_tick_cycle : (unit) -> unit 
+function timing_tick_cycle(unit) = {
+    passed_cycles = passed_cycles + g_sys_clock_tick_cycles;
     cycle_timer_update();
 }

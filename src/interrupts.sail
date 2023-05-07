@@ -9,19 +9,20 @@ function interrupt_service_routine(addr, bit) = {
     interrupt_enable = interrupt_enable & (~(0x01 << bit));
 
     /* 2 NOPs */
-    timing_add_cycles(8);
+    timing_tick_cycle();
+    timing_tick_cycle();
 
     /* Push PC onto the stack */
-    timing_add_cycles(4);
+    timing_tick_cycle();
     let addr = read_reg16(reg16_name(SP)) + -2;
     write_reg16(reg16_name(SP)) = addr;
 
     write(addr + 1, truncate((PC >> 8) & 0x00FF, 8));
-    timing_add_cycles(4);
+    timing_tick_cycle();
     write(addr + 0, truncate(PC & 0x00FF, 8));
 
     /* Set pc to handler */
-    timing_add_cycles(4);
+    timing_tick_cycle();
     set_PC(EXTZ(addr));
 }
 

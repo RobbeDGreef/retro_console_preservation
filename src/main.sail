@@ -53,7 +53,7 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
     /* Fetch execute overlap handling */
     if (not(prev_instruction)) then {
         cycles = cycles + g_fetch_duration;
-        timing_add_cycles(g_fetch_duration);
+        timing_tick_cycle();
     };
 
     /* Execute instruction */
