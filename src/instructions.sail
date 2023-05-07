@@ -190,12 +190,10 @@ union clause ast = ADDAR : (dst) /* A=A+r */
 union clause ast = ADDAN : (imm8) /* A=A+n */
 union clause ast = ADCAR : (dst) /* A=A+r+cy */
 union clause ast = ADCAN : (imm8) /* A=A+n+cy */
-union clause ast = ADCAHL : (unit) /* A=A+(HL)+cy */
 union clause ast = SUBR : (dst) /* A=A-r */
 union clause ast = SUBN : (imm8) /* A=A-n */
 union clause ast = SBCAR : (dst) /* A=A-r-cy */
 union clause ast = SBCAN : (imm8) /* A=A-n-cy */
-union clause ast = SBCAHL : (unit) /* A=A-(HL)-cy */
 union clause ast = ANDR : (dst) /* A=A & r */
 union clause ast = ANDN : (imm8) /* A=A & n */
 union clause ast = XORR : (dst) /* A=A xor r */
@@ -616,8 +614,12 @@ function clause get_cycles_per_instruction(LDNNSP(nn)) = 20
 function clause assembly(LDNNSP(nn)) = concat_str(concat_str("ld", concat_str("\t", concat_str(concat_str("(", bits_str((nn))), ")"))), concat_str(", ", "SP"))
 /* (nn)=SP */
 function clause execute(LDNNSP(nn)) = {
-    /* todo: implement me */
-    throw(error_not_implemented("LDNNSP"));
+    let sp = read_reg16(reg16_name(SP));
+    timing_add_cycles(4);
+    write(nn) = truncate(sp, 8);
+    timing_add_cycles(4);
+    write(nn+1) = truncate((sp >> 8), 8);
+    timing_add_cycles(4);
     true
 }
 function clause get_cycles_per_instruction(LDSPHL()) = 8
@@ -637,15 +639,15 @@ function clause assembly(PUSHRR(rr)) = concat_str("push", concat_str("\t", reg16
 function clause execute(PUSHRR(rr)) = {
     /* Cycle to put SP on the addr line */
     timing_add_cycles(4);
-    
+
     /* Im pretty sure doing this in one go here is accurate enough */
     write_reg16(reg16_name(SP)) = read_reg16(reg16_name(SP)) + -2;
     let addr = read_reg16(reg16_name(SP));
 
     timing_add_cycles(4);
-    write(addr + 1, truncate((read_reg16_wAF(rr) >> 8) & 0x00FF, 8));
+    write(addr + 1, truncate((read_reg16_wAF(rr) >> 8), 8));
     timing_add_cycles(4);
-    write(addr + 0, truncate(read_reg16_wAF(rr) & 0x00FF, 8));
+    write(addr + 0, truncate(read_reg16_wAF(rr), 8));
     timing_add_cycles(4);
 
     true
@@ -655,36 +657,39 @@ function clause assembly(POPRR(rr)) = concat_str("pop", concat_str("\t", reg16_w
 /* rr=(SP)  SP=SP+2 ; rr may be BC,DE,HL,AF */
 function clause execute(POPRR(rr)) = {
     let addr = read_reg16(reg16_name(SP));
+    timing_add_cycles(4);
     let lsb = read(addr);
     timing_add_cycles(4);
     let msb = read(addr + 1);
+
     timing_add_cycles(4);
-    
     write_reg16_wAF(rr) = (EXTZ(msb) << 8) + EXTZ(lsb);
     write_reg16(reg16_name(SP)) = read_reg16(reg16_name(SP)) + 2;
-    timing_add_cycles(4);
 
     true
 }
+
+val add : (word, word) -> word
+function add(a, b) = {
+    let res = a + b;
+    let long_res : bits(16) = EXTZ(a) + EXTZ(b);
+
+    set_flags(
+        if res == 0x00 then 0b1 else 0b0,
+        0b0,
+        if (((a & 0x0f) + (b & 0x0f)) & 0x10) != 0x00 then 0b1 else 0b0,
+        if (long_res & 0x0100) != 0x0000 then 0b1 else 0b0
+    );
+
+    return res;
+}
+
 function clause get_cycles_per_instruction(ADDAR(r)) = 4
 function clause assembly(ADDAR(r)) = concat_str(concat_str("add", concat_str("\t", "A")), concat_str(", ", reg8_str(r)))
 /* A=A+r */
 function clause execute(ADDAR(r)) = {
     timing_add_cycles(4);
-
-    let res = read_reg8(reg8_name(A)) + read_reg8(r);
-
-    /* there must be a better way but this is an easy way to check for integer overflows */
-    let large_res : bits(32) = EXTZ(read_reg8(reg8_name(A))) + EXTZ(read_reg8(r));
-
-    set_flags(
-        if res == 0x00 then 0b1 else 0b0,
-        0b0,
-        0b0, /* todo: h flag */
-        if unsigned(large_res) > unsigned(0xff) then 0b1 else 0b0
-    );
-
-    write_reg8(reg8_name(A)) = res;
+    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), read_reg8(r));
     true
 }
 function clause get_cycles_per_instruction(ADDAN(n)) = 8
@@ -692,56 +697,53 @@ function clause assembly(ADDAN(n)) = concat_str(concat_str("add", concat_str("\t
 /* A=A+n */
 function clause execute(ADDAN(n)) = {
     timing_add_cycles(4);
-    let res = read_reg8(reg8_name(A)) + n;
+    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), n);
+    true
+}
 
-
-    /* there must be a better way but this is an easy way to check for integer overflows */
-    let large_res : bits(32) = EXTZ(read_reg8(reg8_name(A))) + EXTZ(n);
+val adc : (word, word, word) -> word
+function adc(a, b, c) = {
+    let res = a + b + c;
+    let long_res : bits(16) = EXTZ(a) + EXTZ(b) + EXTZ(c);
 
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
         0b0,
-        0b0, /* todo: h flag */
-        if unsigned(large_res) > unsigned(0xff) then 0b1 else 0b0
+        if (((a & 0x0f) + (b & 0x0f) + (c & 0x0f)) & 0x10) != 0x00 then 0b1 else 0b0,
+        if (long_res & 0x0100) != 0x0000 then 0b1 else 0b0
     );
 
-    write_reg8(reg8_name(A)) = res;
-    true
+    return res;
 }
+
 function clause get_cycles_per_instruction(ADCAR(r)) = 4
 function clause assembly(ADCAR(r)) = concat_str(concat_str("adc", concat_str("\t", "A")), concat_str(", ", reg8_str(r)))
 /* A=A+r+cy */
 function clause execute(ADCAR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z0hc */
-    throw(error_not_implemented("ADCAR"));
+    timing_add_cycles(4);
+    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), read_reg8(r), EXTZ(flag_c()));
     true
 }
 function clause get_cycles_per_instruction(ADCAN(n)) = 8
 function clause assembly(ADCAN(n)) = concat_str(concat_str("adc", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
 /* A=A+n+cy */
 function clause execute(ADCAN(n)) = {
-    /* todo: implement me */
-    /* todo: flags z0hc */
-    throw(error_not_implemented("ADCAN"));
-    true
-}
-function clause get_cycles_per_instruction(ADCAHL()) = 8
-function clause assembly(ADCAHL()) = concat_str(concat_str("adc", concat_str("\t", "A")), concat_str(", ", "(HL)"))
-/* A=A+(HL)+cy */
-function clause execute(ADCAHL()) = {
-    /* todo: implement me */
-    /* todo: flags z0hc */
-    throw(error_not_implemented("ADCAHL"));
+    timing_add_cycles(4);
+    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), n, EXTZ(flag_c()));
     true
 }
 function clause get_cycles_per_instruction(SUBR(r)) = 4
 function clause assembly(SUBR(r)) = concat_str("sub", concat_str("\t", reg8_str(r)))
 /* A=A-r */
 function clause execute(SUBR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z1hc */
-    throw(error_not_implemented("SUBR"));
+    timing_add_cycles(4);
+    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), 0x00 - read_reg8(r));
+    set_flags(
+        flag_z(),
+        0b1,
+        ~(flag_h()),
+        ~(flag_c())
+    );
     true
 }
 function clause get_cycles_per_instruction(SUBN(n)) = 8
@@ -749,43 +751,42 @@ function clause assembly(SUBN(n)) = concat_str("sub", concat_str("\t", bits_str(
 /* A=A-n */
 function clause execute(SUBN(n)) = {
     timing_add_cycles(4);
-    let res = read_reg8(reg8_name(A)) - n;
-
+    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), 0x00 - n);
     set_flags(
-        if res == 0x00 then 0b1 else 0b0,
+        flag_z(),
         0b1,
-        0b0, /* todo: h */
-        if signed(res) < 0 then 0b1 else 0b0
+        ~(flag_h()),
+        ~(flag_c())
     );
-
-    write_reg8(reg8_name(A)) = res;
     true
 }
+
 function clause get_cycles_per_instruction(SBCAR(r)) = 4
 function clause assembly(SBCAR(r)) = concat_str(concat_str("sbc", concat_str("\t", "A")), concat_str(", ", reg8_str(r)))
 /* A=A-r-cy */
 function clause execute(SBCAR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z1hc */
-    throw(error_not_implemented("SBCAR"));
+    timing_add_cycles(4);
+    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), 0x00 - read_reg8(r), 0x00 - EXTZ(flag_c()));
+    set_flags(
+        flag_z(),
+        0b1,
+        ~(flag_h()),
+        ~(flag_c())
+    );
     true
 }
 function clause get_cycles_per_instruction(SBCAN(n)) = 8
 function clause assembly(SBCAN(n)) = concat_str(concat_str("sbc", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
 /* A=A-n-cy */
 function clause execute(SBCAN(n)) = {
-    /* todo: implement me */
-    /* todo: flags z1hc */
-    throw(error_not_implemented("SBCAN"));
-    true
-}
-function clause get_cycles_per_instruction(SBCAHL()) = 8
-function clause assembly(SBCAHL()) = concat_str(concat_str("sbc", concat_str("\t", "A")), concat_str(", ", "(HL)"))
-/* A=A-(HL)-cy */
-function clause execute(SBCAHL()) = {
-    /* todo: implement me */
-    /* todo: flags z1hc */
-    throw(error_not_implemented("SBCAHL"));
+    timing_add_cycles(4);
+    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), 0x00 - n, 0x00 - EXTZ(flag_c()));
+    set_flags(
+        flag_z(),
+        0b1,
+        ~(flag_h()),
+        ~(flag_c())
+    );
     true
 }
 function clause get_cycles_per_instruction(ANDR(r)) = 4
@@ -872,9 +873,16 @@ function clause get_cycles_per_instruction(ORN(n)) = 8
 function clause assembly(ORN(n)) = concat_str("or", concat_str("\t", bits_str(n)))
 /* A=A \ */
 function clause execute(ORN(n)) = {
-    /* todo: flags z000 */
-    /* todo: implement me */
-    throw(error_not_implemented("ORN"));
+    timing_add_cycles(4);
+    let res = read_reg8(reg8_name(A)) | n;
+
+    set_flags(
+        if res == 0x00 then 0b1 else 0b0,
+        0b0,
+        0b0,
+        0b0
+    );
+    write_reg8(reg8_name(A)) = res;
     true
 }
 function clause get_cycles_per_instruction(CPR(r)) = 4
@@ -882,13 +890,13 @@ function clause assembly(CPR(r)) = concat_str("cp", concat_str("\t", reg8_str(r)
 /* compare A-r */
 function clause execute(CPR(r)) = {
     timing_add_cycles(4);
-    let res = unsigned(read_reg8(reg8_name(A))) - unsigned(read_reg8(r));
-    
+    let useless = add(read_reg8(reg8_name(A)), 0x00 - read_reg8(r));
+
     set_flags(
-        if res == 0 then 0b1 else 0b0,
+        flag_z(),
         0b1,
-        0b0, /* todo: h */
-        if res < 0 then 0b1 else 0b0
+        ~(flag_h()),
+        ~(flag_c())
     );
 
     true
@@ -899,13 +907,13 @@ function clause assembly(CPN(n)) = concat_str("cp", concat_str("\t", bits_str(n)
 /* compare A-n */
 function clause execute(CPN(n)) = {
     timing_add_cycles(4);
-    let res = unsigned(read_reg8(reg8_name(A))) - unsigned(n);
-    
+    let useless = add(read_reg8(reg8_name(A)), 0x00 - n);
+
     set_flags(
-        if res == 0 then 0b1 else 0b0,
+        flag_z(),
         0b1,
-        0b0, /* todo: h */
-        if res < 0 then 0b1 else 0b0
+        ~(flag_h()),
+        ~(flag_c())
     );
 
     true
@@ -915,14 +923,16 @@ function clause assembly(INCR(r)) = concat_str("inc", concat_str("\t", reg8_str(
 /* r=r+1 */
 function clause execute(INCR(r)) = {
     timing_add_cycles(4);
-    write_reg8(r) = read_reg8(r) + 1;
-    
+    let res = read_reg8(r) + 1;
+
     set_flags(
-        if read_reg8(r) == 0x00 then 0b1 else 0b0,
+        if res == 0x00 then 0b1 else 0b0,
         0b0,
-        0b0, /* todo: h register */
+        if (((read_reg8(r) & 0x0F) + 0x01) & 0x10) != 0x00 then 0b1 else 0b0,
         flag_c()
     );
+
+    write_reg8(r) = res;
     true
 }
 function clause get_cycles_per_instruction(DECR(r)) = 4
@@ -930,14 +940,16 @@ function clause assembly(DECR(r)) = concat_str("dec", concat_str("\t", reg8_str(
 /* r=r-1 */
 function clause execute(DECR(r)) = {
     timing_add_cycles(4);
-    write_reg8(r) = read_reg8(r) + -1;
-    
+    let res = read_reg8(r) + -1;
+
     set_flags(
-        if read_reg8(r) == 0x00 then 0b1 else 0b0,
+        if res == 0x00 then 0b1 else 0b0,
         0b1,
-        0b0, /* todo: h register */
+        if (((read_reg8(r) & 0x0F) + 0x0F) & 0x10) != 0x00 then 0b1 else 0b0,
         flag_c()
     );
+
+    write_reg8(r) = res;
     true
 }
 function clause get_cycles_per_instruction(ADDSPD(d)) = 16
@@ -945,7 +957,8 @@ function clause assembly(ADDSPD(d)) = concat_str("add\tSP, ", bits_str(d))
 /* SP = SP +/- dd ; dd is 8-bit signed number */
 function clause execute(ADDSPD(d)) = {
     /* I am not yet sure if this is correct because I could not find docs */
-    timing_add_cycles(8);
+    timing_add_cycles(4);
+    timing_add_cycles(4);
     let res = read_reg16(reg16_name(SP)) + EXTS(d);    
     write_reg16(reg16_name(SP)) = res;
     
@@ -983,9 +996,35 @@ function clause get_cycles_per_instruction(DAA()) = 4
 function clause assembly(DAA()) = "daa"
 /* decimal adjust A */
 function clause execute(DAA()) = {
-    /* todo: implement me */
-    /* todo: flags z-0c */
-    throw(error_not_implemented("DAA"));
+    timing_add_cycles(4);
+
+    /* Code taken from mooneye-gb emulator (and converted to sail ofcourse) */
+    var carry = 0b0;
+    var acc = read_reg8(reg8_name(A));
+
+    if (flag_n() == 0b0) then {
+        if ((flag_c() == 0b1) & (unsigned(acc) > unsigned(0x99))) then {
+            acc = acc + 0x60;
+            carry = 0b1;
+        };
+        if ((flag_h() == 0b1) | (unsigned(acc & 0x0F) > unsigned(0x09))) then {
+            acc = acc + 0x06;
+        };
+    } else if (flag_c() == 0b1) then {
+        carry = 0b1;
+        acc = acc + (if (flag_h() == 0b1) then 0x9a else 0xa0);
+    } else if (flag_h() == 0b1) then {
+        acc = acc + 0xfa;
+    };
+
+    set_flags(
+        if (acc == 0x00) then 0b1 else 0b0,
+        flag_n(),
+        0b0,
+        carry
+    );
+
+    write_reg8(reg8_name(A)) = acc;
     true
 }
 function clause get_cycles_per_instruction(CPL()) = 4
@@ -1049,81 +1088,137 @@ function clause get_cycles_per_instruction(RLCA()) = 4
 function clause assembly(RLCA()) = "rlca"
 /* rotate A left */
 function clause execute(RLCA()) = {
-    /* todo: implement me */
-    /* todo: flags 000c */
-    throw(error_not_implemented("RLCA"));
+    let useless = execute(RLCR(reg8_name(A)));
+    set_flags(
+        0b0,
+        0b0,
+        0b0,
+        flag_c()
+    );
     true
 }
 function clause get_cycles_per_instruction(RLA()) = 4
 function clause assembly(RLA()) = "rla"
 /* rotate A left through carry */
 function clause execute(RLA()) = {
-    /* todo: implement me */
-    /* todo: flags 000c */
-    throw(error_not_implemented("RLA"));
+    let useless = execute(RLR(reg8_name(A)));
+    set_flags(
+        0b0,
+        0b0,
+        0b0,
+        flag_c()
+    );
     true
 }
 function clause get_cycles_per_instruction(RRCA()) = 4
 function clause assembly(RRCA()) = "rrca"
 /* rotate A right */
 function clause execute(RRCA()) = {
-    /* todo: implement me */
-    /* todo: flags 000c */
-    throw(error_not_implemented("RRCA"));
+    let useless = execute(RRCR(reg8_name(A)));
+    set_flags(
+        0b0,
+        0b0,
+        0b0,
+        flag_c()
+    );
     true
 }
 function clause get_cycles_per_instruction(RRA()) = 4
 function clause assembly(RRA()) = "rra"
 /* rotate A right through carry */
 function clause execute(RRA()) = {
-    /* todo: implement me */
-    /* todo: flags 000c */
-    throw(error_not_implemented("RRA"));
+    /* Todo better way to get rid of this bool value? */
+    let useless = execute(RRR(reg8_name(A)));
+    set_flags(
+        0b0,
+        0b0,
+        0b0,
+        flag_c()
+    );
     true
 }
 function clause get_cycles_per_instruction(RLCR(r)) = 8
 function clause assembly(RLCR(r)) = concat_str("rlc", concat_str("\t", reg8_str(r)))
 /* rotate left */
 function clause execute(RLCR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z00c */
-    throw(error_not_implemented("RLCR"));
+    timing_add_cycles(4);
+    let new_carry = truncate((read_reg8(r) >> 7) & 0x01, 1);
+    let new_reg = (read_reg8(r) << 1);
+    write_reg8(r) = new_reg;
+    set_flags(
+        if new_reg == 0x00 then 0b1 else 0b0,
+        0b0,
+        0b0,
+        new_carry
+    );
+
     true
 }
 function clause get_cycles_per_instruction(RLR(r)) = 8
 function clause assembly(RLR(r)) = concat_str("rl", concat_str("\t", reg8_str(r)))
 /* rotate left through carry */
 function clause execute(RLR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z00c */
-    throw(error_not_implemented("RLR"));
+    timing_add_cycles(4);
+    let new_carry = truncate(read_reg8(r) >> 7, 1);
+    let new_reg = (read_reg8(r) << 1) | EXTZ(flag_c());
+    write_reg8(r) = new_reg;
+    set_flags(
+        if new_reg == 0x00 then 0b1 else 0b0,
+        0b0,
+        0b0,
+        new_carry
+    );
+
     true
 }
 function clause get_cycles_per_instruction(RRCR(r)) = 8
 function clause assembly(RRCR(r)) = concat_str("rrc", concat_str("\t", reg8_str(r)))
 /* rotate right */
 function clause execute(RRCR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z00c */
-    throw(error_not_implemented("RRCR"));
+    timing_add_cycles(4);
+    let new_carry = truncate(read_reg8(r), 1);
+    let new_reg = (read_reg8(r) >> 1);
+    write_reg8(r) = new_reg;
+    set_flags(
+        if new_reg == 0x00 then 0b1 else 0b0,
+        0b0,
+        0b0,
+        new_carry
+    );
+
     true
 }
 function clause get_cycles_per_instruction(RRR(r)) = 8
 function clause assembly(RRR(r)) = concat_str("rr", concat_str("\t", reg8_str(r)))
 /* rotate right through carry */
 function clause execute(RRR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z00c */
-    throw(error_not_implemented("RRR"));
+    timing_add_cycles(4);
+    let new_carry = truncate(read_reg8(r) & 0x01, 1);
+    let new_reg = (read_reg8(r) >> 1) |  (EXTZ(flag_c()) << 7);
+    write_reg8(r) = new_reg;
+    set_flags(
+        if new_reg == 0x00 then 0b1 else 0b0,
+        0b0,
+        0b0,
+        new_carry
+    );
+
     true
 }
 function clause get_cycles_per_instruction(SLAR(r)) = 8
 function clause assembly(SLAR(r)) = concat_str("sla", concat_str("\t", reg8_str(r)))
 /* shift left arithmetic (b0=0) */
 function clause execute(SLAR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z00c */
-    throw(error_not_implemented("SLAR"));
+    timing_add_cycles(4);
+    let new_carry = truncate(read_reg8(r) >> 7, 1);
+    let new_reg = (read_reg8(r) << 1);
+    write_reg8(r) = new_reg;
+    set_flags(
+        if new_reg == 0x00 then 0b1 else 0b0,
+        0b0,
+        0b0,
+        new_carry
+    );
     true
 }
 function clause get_cycles_per_instruction(SWAPR(r)) = 8
@@ -1147,9 +1242,17 @@ function clause get_cycles_per_instruction(SRAR(r)) = 8
 function clause assembly(SRAR(r)) = concat_str("sra", concat_str("\t", reg8_str(r)))
 /* shift right arithmetic (b7=b7) */
 function clause execute(SRAR(r)) = {
-    /* todo: implement me */
-    /* todo: flags z00c */
-    throw(error_not_implemented("SRAR"));
+    timing_add_cycles(4);
+    let new_carry = truncate(read_reg8(r), 1);
+    let new_reg = (read_reg8(r) >> 1) | (read_reg8(r) & 0x80);
+    write_reg8(r) = new_reg;
+    set_flags(
+        if new_reg == 0x00 then 0b1 else 0b0,
+        0b0,
+        0b0,
+        new_carry
+    );
+
     true
 }
 function clause get_cycles_per_instruction(SRLR(r)) = 8
@@ -1171,7 +1274,8 @@ function clause get_cycles_per_instruction(JRNN(d)) = 12
 function clause assembly(JRNN(d)) = "JR    PC+nn"
 /* relative jump to nn (PC=PC+8-bit signed) */
 function clause execute(JRNN(d)) = {
-    timing_add_cycles(8);
+    timing_add_cycles(4);
+    timing_add_cycles(4);
     set_PC(PC + EXTS(d));
     true
 }
@@ -1186,47 +1290,47 @@ function clause execute(JRCN(c, n)) = {
         timing_add_cycles(4);
         set_PC(PC + EXTS(n));
     };
-    
+
     true
 }
 function clause get_cycles_per_instruction(LDFF00NNA(n)) = 12
 function clause assembly(LDFF00NNA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00 + EXTZ(n)), "), A"))
 /* write to io-port n (memory FF00+n) */
 function clause execute(LDFF00NNA(n)) = {
+    timing_add_cycles(4);
     let res = read_reg8(reg8_name(A));
     timing_add_cycles(4);
     write(0xFF00 + EXTZ(n), res);
-    timing_add_cycles(4);
     true
 }
 function clause get_cycles_per_instruction(LDAFF00NN(n)) = 12
 function clause assembly(LDAFF00NN(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00 + EXTZ(n)), ")"))
 /* read from io-port n (memory FF00+n) */
 function clause execute(LDAFF00NN(n)) = {
+    timing_add_cycles(4);
     let res = read(0xFF00 + EXTZ(n));
     timing_add_cycles(4);
     write_reg8(reg8_name(A)) = res;
-    timing_add_cycles(4);   
     true
 }
 function clause get_cycles_per_instruction(LDFF00CA(n)) = 8
 function clause assembly(LDFF00CA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00), "+C), A"))
 /* write to io-port C (memory FF00+C) */
 function clause execute(LDFF00CA()) = {
+    timing_add_cycles(4);
     let res = read_reg8(reg8_name(A));
     timing_add_cycles(4);
     write(0xFF00 + EXTZ(read_reg8(reg8_name(C))), res);
-    timing_add_cycles(4);
     true
 }
 function clause get_cycles_per_instruction(LDAFF00C(n)) = 8
 function clause assembly(LDAFF00C(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00), "+C)"))
 /* read from io-port n (memory FF00+n) */
 function clause execute(LDAFF00C(n)) = {
+    timing_add_cycles(4);
     let res = read(0xFF00 + EXTZ(read_reg8(reg8_name(C))));
     timing_add_cycles(4);
     write_reg8(reg8_name(A)) = res;
-    timing_add_cycles(4);
     true
 }
 function clause get_cycles_per_instruction(BITNR(n, r)) = 8
@@ -1303,35 +1407,35 @@ function clause execute(HALT()) = {
     throw(error_not_implemented("HALT"));
     true
 }
-function clause get_cycles_per_instruction(STOP()) = /* todo */ 0
+function clause get_cycles_per_instruction(STOP()) = 4
 function clause assembly(STOP()) = "stop"
 /* low power standby mode (VERY low power) */
 function clause execute(STOP()) = {
     /* todo: implement me */
-    throw(error_not_implemented("STOP"));
     true
 }
 function clause get_cycles_per_instruction(DI()) = 4
 function clause assembly(DI()) = "di"
 /* disable interrupts, IME=0 */
 function clause execute(DI()) = {
-    /* todo: implement me */
     timing_add_cycles(4);
+    interrupt_master = 0x00;
     true
 }
 function clause get_cycles_per_instruction(EI()) = 4
 function clause assembly(EI()) = "ei"
 /* enable interrupts, IME=1 */
 function clause execute(EI()) = {
-    /* todo: implement me */
     timing_add_cycles(4);
+    interrupt_master = 0x01;
     true
 }
 function clause get_cycles_per_instruction(JPNN(nn)) = 16
 function clause assembly(JPNN(nn)) = concat_str("jp", concat_str("\t", bits_str(nn)))
 /* jump to nn, PC=nn */
 function clause execute(JPNN(nn)) = {
-    timing_add_cycles(8);
+    timing_add_cycles(4);
+    timing_add_cycles(4);
     set_PC(nn);
     true
 }
@@ -1356,7 +1460,7 @@ function clause assembly(CALLNN(nn)) = concat_str("call", concat_str("\t", bits_
 /* call to nn, SP=SP-2, (SP)=PC, PC=nn */
 function clause execute(CALLNN(nn)) = {
     timing_add_cycles(4);
-    
+
     let addr = read_reg16(reg16_name(SP)) + -2;
     write_reg16(reg16_name(SP)) = addr;
 
@@ -1418,10 +1522,22 @@ function clause execute(RETF(c)) = {
 function clause get_cycles_per_instruction(RETI()) = 16
 function clause assembly(RETI()) = "reti"
 /* return and enable interrupts (IME=1) */
-function clause execute(RETI()) = {
-    /* todo: implement me */
-    throw(error_not_implemented("RETI"));
+function clause execute(RETI()) = {    
+    timing_add_cycles(4);
+    interrupt_master = 0x01;
+    let addr = read_reg16(reg16_name(SP));
+    let lsb = read(addr);
+    timing_add_cycles(4);
+    let msb = read(addr + 1);
+    
+    write_reg16(reg16_name(SP)) = addr + 2;
+    
+    timing_add_cycles(4);
+    set_PC(EXTZ(msb) << 8 + EXTZ(lsb));
+    
+    timing_add_cycles(4);
     true
+
 }
 function clause get_cycles_per_instruction(RSTN(n)) = 16
 function clause assembly(RSTN(n)) = concat_str("rst", concat_str("\t", bits_str(n)))
