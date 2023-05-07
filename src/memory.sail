@@ -18,11 +18,5 @@ val custom_read_ram = "custom_read_ram" : forall 'n 'm.
 val write : (address, word) -> unit
 function write(addr, value) = custom_write_ram(32, 1, 32^0x0, EXTZ(addr), value)
 
-val write16 : (address, dword) -> unit
-function write16(addr, value) = custom_write_ram(32, 2, 32^0x0, EXTZ(addr), value)
-
 val read : (address) -> word
 function read(addr) = custom_read_ram(32, 1, 32^0x0, EXTZ(addr))
-
-val read16 : (address) -> dword
-function read16(addr) = custom_read_ram(32, 2, 32^0x0, EXTZ(addr))
