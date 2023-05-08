@@ -7,4 +7,6 @@
 #define DEBUG 1
 #define UNIMPLEMENTED(msg) do { printf("Unimplemented: %s\n", msg); exit(0); } while (0)
 
+void debug_init();
+
 #endif /* __DEBUG_H */

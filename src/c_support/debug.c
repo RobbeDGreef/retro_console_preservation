@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "rts.h"
+#include "sail.h"
 #include "support.h"
 
 /* Sail stuff, defined in the generated output/main.c */
@@ -112,7 +113,7 @@ static void add_breakpoint(int addr)
 
 static void examine_memory(int mem)
 {
-    printf("%04X: %04X (%d)\n", mem, read_mem(mem));
+    printf("%04X: %04X (%d)\n", mem, read_mem(mem) | (read_mem(mem + 1) << 8));
 }
 
 static int console()
@@ -222,7 +223,6 @@ static int console()
 
         add_breakpoint(strtol(input + 2, NULL, 0));
         return LOOP_AGAIN;
-    
     }
 
     return LOOP_AGAIN;
@@ -243,6 +243,10 @@ unit debug_hook(sail_int sail_pc)
 
     while (console())
         ;
-    
+
     return UNIT;
+}
+
+void debug_init()
+{
 }
