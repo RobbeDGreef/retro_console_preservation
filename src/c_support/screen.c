@@ -41,6 +41,25 @@
 #define OBJ_ENABLE (1 << 1)
 #define BG_WINDOW_PRIORITY_ENABLE (1 << 0)
 
+/* Simply to write less boilerplate code, creates the functions and registrations for us */
+#define DEF_IO_SIMPLE_VALUE(name, varname, lockname)             \
+    void io_write_##name(uint64_t addr, int bytes, uint64_t val) \
+    {                                                            \
+        pthread_spin_lock(&lockname);                            \
+        varname = val;                                           \
+        pthread_spin_unlock(&lockname);                          \
+    }                                                            \
+    uint64_t io_read_##name(uint64_t addr, int bytes)            \
+    {                                                            \
+        pthread_spin_lock(&lockname);                            \
+        uint64_t ret = varname;                                  \
+        pthread_spin_unlock(&lockname);                          \
+        return ret;                                              \
+    }
+#define REGISTER_IO_FUNCS(addr, name)               \
+    register_io_read_handler(addr, io_read_##name); \
+    register_io_write_handler(addr, io_write_##name)
+
 struct sprite
 {
     uint8_t y_pos;
@@ -63,7 +82,13 @@ pthread_spinlock_t g_vscan_lock;
 int g_vscan = 0;
 int g_hscan = 0;
 uint32_t g_screen_buffer[VIRT_SCREEN_WIDTH * VIRT_SCREEN_HEIGHT];
+
+pthread_spinlock_t g_lcd_control_lock;
+pthread_spinlock_t g_lcd_scx_lock;
+pthread_spinlock_t g_lcd_scy_lock;
 uint8_t g_lcd_control = BG_WINDOW_PRIORITY_ENABLE | BG_WINDOW_TILE_DATA_AREA_8000 | LCD_AND_PPU_ENABLE;
+uint8_t g_lcd_scx;
+uint8_t g_lcd_scy;
 
 static void stop_sdl()
 {
@@ -91,7 +116,7 @@ static void update_events()
 static void copy_vram_and_oam()
 {
     memory_copy(g_vram, VRAM_BASE, VRAM_LENGTH);
-    memory_copy(g_oam, OAM_BASE, OAM_LENGTH);   
+    memory_copy(g_oam, OAM_BASE, OAM_LENGTH);
 }
 
 static uint8_t *get_tile_map()
@@ -133,10 +158,11 @@ static void draw_tile(int x, int y, uint8_t *tile)
             /* We need to invert the tiles on the X axis for some reason */
             int x_inverted = x + (TILE_WIDTH - 1 - j);
             int y_loc = (y + i);
-            
+
             /* todo there is a more efficient way to solve this but this works for now */
             /* Check if we would write out of bounds */
-            if (y_loc < 0 || x_inverted < 0 || y_loc >= VIRT_SCREEN_WIDTH || x_inverted >= VIRT_SCREEN_WIDTH) continue;
+            if (y_loc < 0 || x_inverted < 0 || y_loc >= VIRT_SCREEN_WIDTH || x_inverted >= VIRT_SCREEN_WIDTH)
+                continue;
 
             g_screen_buffer[y_loc * TILEMAP_WIDTH + x_inverted] = color;
         }
@@ -158,7 +184,6 @@ static void draw_screen(unsigned long start_time)
 {
     SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 255);
 
-
 #if !(DBG_DISPLAY_TILES_ONLY)
     uint8_t *tilemap = get_tile_map();
 
@@ -167,7 +192,7 @@ static void draw_screen(unsigned long start_time)
     {
         for (int x = 0; x < TILEMAP_WIDTH / TILE_WIDTH; x++)
         {
-            int tile_idx = (int8_t) tilemap[(TILEMAP_WIDTH / TILE_WIDTH) * y + x];
+            int tile_idx = (int8_t)tilemap[(TILEMAP_WIDTH / TILE_WIDTH) * y + x];
             draw_tile(x * TILE_WIDTH, y * TILE_WIDTH, get_tile(tile_idx, 0));
         }
     }
@@ -188,8 +213,9 @@ static void draw_screen(unsigned long start_time)
     int non_empty = 0;
     for (int i = 0; i < 128; i++)
     {
-        uint8_t* tile = get_tile(i, 1);
-        if (*tile != 0) {
+        uint8_t *tile = get_tile(i, 1);
+        if (*tile != 0)
+        {
             non_empty++;
         }
         draw_tile(x, y, tile);
@@ -204,11 +230,9 @@ static void draw_screen(unsigned long start_time)
 
 #endif
 
-
     pthread_spin_lock(&g_vscan_lock);
     g_vscan = 0;
     pthread_spin_unlock(&g_vscan_lock);
-
     /**
      * We sleep during the scanlines and try to give the scanlines a certain time per
      * frame because if we didn't, the scanlines would take, say, <1ms and since the
@@ -220,7 +244,16 @@ static void draw_screen(unsigned long start_time)
      * This /2 is a heuristic, it is necessary since the usleep often takes significantly longer
      * than the provided sleeptime. The excess time we lose we handle in the update_screen function.
      */
-    unsigned long time_per_frame = ((FRAME_DURATION - (micros() - start_time)) / VSCAN_MAX) / 2;
+    signed long time_until_now = micros() - start_time;
+    unsigned long time_per_frame;
+    if (time_until_now >= FRAME_DURATION)
+        time_per_frame = 0;
+    else
+        time_per_frame = ((FRAME_DURATION - time_until_now) / VSCAN_MAX) / 2;
+
+    /* We read them only once every draw, this is not accurate according to hardware, but should do */
+    int x_scroll = g_lcd_scx;
+    int y_scroll = g_lcd_scy;
 
     while (g_vscan < VSCAN_MAX)
     {
@@ -228,10 +261,15 @@ static void draw_screen(unsigned long start_time)
 
         for (g_hscan = 0; g_hscan < HSCAN_MAX; g_hscan++)
         {
-            uint32_t color = g_screen_buffer[g_vscan * VIRT_SCREEN_WIDTH + g_hscan];
-
+            int x = (g_hscan + x_scroll) % VIRT_SCREEN_WIDTH;
+            int y = (g_vscan + y_scroll) % VIRT_SCREEN_HEIGHT;
+            uint32_t color = g_screen_buffer[y * VIRT_SCREEN_WIDTH + x];
             SDL_SetRenderDrawColor(g_renderer, (color >> 16) & 0xFF, (color >> 8) & 0xFF, (color >> 0) & 0xFF, (color >> 24) & 0xFF);
-            SDL_RenderDrawPoint(g_renderer, g_hscan, g_vscan);
+
+            SDL_RenderDrawPoint(g_renderer, g_hscan * 2, g_vscan * 2);
+            SDL_RenderDrawPoint(g_renderer, g_hscan * 2, g_vscan * 2 + 1);
+            SDL_RenderDrawPoint(g_renderer, g_hscan * 2 + 1, g_vscan * 2);
+            SDL_RenderDrawPoint(g_renderer, g_hscan * 2 + 1, g_vscan * 2 + 1);
         }
 
         pthread_spin_lock(&g_vscan_lock);
@@ -239,7 +277,6 @@ static void draw_screen(unsigned long start_time)
         pthread_spin_unlock(&g_vscan_lock);
 
         unsigned long scanline_duration = (micros() - scan_start);
-    
         if (scanline_duration < time_per_frame)
             usleep(time_per_frame - scanline_duration);
     }
@@ -266,7 +303,7 @@ void sdl_start()
     g_screen = SDL_CreateWindow("Gameboy",
                                 SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED,
-                                REAL_SCREEN_WIDTH, REAL_SCREEN_HEIGHT,
+                                REAL_SCREEN_WIDTH * 2, REAL_SCREEN_HEIGHT * 2,
                                 0);
     if (!g_screen)
     {
@@ -328,28 +365,25 @@ uint64_t io_read_lcd_stat(uint64_t addr, int bytes)
     UNIMPLEMENTED("lcd read stat register");
 }
 
-void io_write_lcd_control(uint64_t addr, int bytes, uint64_t val)
-{
-    g_lcd_control = (uint8_t)val;
-}
-
-uint64_t io_read_lcd_control(uint64_t addr, int bytes)
-{
-    return g_lcd_control;
-}
+DEF_IO_SIMPLE_VALUE(lcd_control, g_lcd_control, g_lcd_control_lock)
+DEF_IO_SIMPLE_VALUE(lcd_scx, g_lcd_scx, g_lcd_scx_lock)
+DEF_IO_SIMPLE_VALUE(lcd_scy, g_lcd_scy, g_lcd_scy_lock)
 
 void screen_init()
 {
     // Init spinlock
     pthread_spin_init(&g_vscan_lock, 0);
+    pthread_spin_init(&g_lcd_control_lock, 0);
+    pthread_spin_init(&g_lcd_scx_lock, 0);
+    pthread_spin_init(&g_lcd_scy_lock, 0);
 
     register_io_read_handler(0xFF44, io_read_lcd_y);
     register_io_read_handler(0xFF41, io_read_lcd_stat);
-    register_io_read_handler(0xFF40, io_read_lcd_control);
-    register_io_write_handler(0xFF40, io_write_lcd_control);
 
-    UNUSED_IO_ADDR(0xFF42); /* SCY*/
-    UNUSED_IO_ADDR(0xFF43); /* SCX*/
+    REGISTER_IO_FUNCS(0xFF40, lcd_control);
+    REGISTER_IO_FUNCS(0xFF43, lcd_scx);
+    REGISTER_IO_FUNCS(0xFF42, lcd_scy);
+
     UNUSED_IO_ADDR(0xFF4A); /* WY */
     UNUSED_IO_ADDR(0xFF4B); /* WX */
     UNUSED_IO_ADDR(0xFF47); /* Palette data */
