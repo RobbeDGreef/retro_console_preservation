@@ -21,9 +21,7 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
     check_for_interrupts();
 
     let start_micro = get_time_micro();
-
     let instruction = read(PC);
-
     let inst_pc = unsigned(PC);
 
     PC = PC + 1;
@@ -39,19 +37,13 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
         Some(ast) => assembly(ast),
         None(ast) => {throw error_internal_error(); "unknown instruction"}
     };
-    //print_instruction(inst_pc, asm, cycles_before);
+    print_instruction(inst_pc, asm, cycles_before);
 
     /* Call debugger hook before the instruction is executed */
     debug_hook(inst_pc);
 
-    /* Fetch the amount of cycles the instruction should take */
-    var cycles : int = match(decoded) {
-        Some(ast) => get_cycles_per_instruction(ast)
-    };
-
     /* Fetch execute overlap handling */
     if (not(prev_instruction)) then {
-        cycles = cycles + g_fetch_duration;
         timing_tick_cycle();
     };
 
@@ -60,15 +52,10 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
         Some(ast) => execute(ast)
     };
 
-    /* Make sure the updated cycles is correct with the amount of cycles that should have passed */
-    if (passed_cycles - cycles_before != cycles) then {
-        throw error_cycles_incorrectly_updated(asm, cycles, passed_cycles - cycles_before)
-    };
-
     //print_cpu_state();
 
-    /* Finally the acutal sleep */
-    timing_sleep_cycles(cycles, start_micro);
+    /* Finally the acutal sleep to be timing accurate */
+    timing_sleep_cycles(passed_cycles - cycles_before, start_micro);
 
     return loop_again;
 }
