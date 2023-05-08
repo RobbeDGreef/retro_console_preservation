@@ -20,7 +20,6 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
     /* First try to execute an interrupt */
     check_for_interrupts();
 
-    let before_passed_cycles = passed_cycles;
     let start_micro = get_time_micro();
 
     let instruction = read(PC);
@@ -40,7 +39,7 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
         Some(ast) => assembly(ast),
         None(ast) => {throw error_internal_error(); "unknown instruction"}
     };
-    print_instruction(inst_pc, asm);
+    //print_instruction(inst_pc, asm, cycles_before);
 
     /* Call debugger hook before the instruction is executed */
     debug_hook(inst_pc);
