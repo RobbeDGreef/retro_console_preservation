@@ -127,9 +127,6 @@ static int console()
 
     input[strlen(input) - 1] = '\0'; /* Remove trailing newline */
 
-    if (g_prev_command == NEXT)
-        print_registers();
-
     int cmd = NOP;
 
     if (strcmp(input, "") == 0)
