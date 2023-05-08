@@ -62,11 +62,11 @@ int breakpoints[MAX_BREAKPOINTS] = {
     /* Eg: 0x150 */
 };
 
-static int is_at_breakpoint()
+static int is_at_breakpoint(unsigned long pc)
 {
     for (int i = 0; i < MAX_BREAKPOINTS; i++)
     {
-        if (PC == breakpoints[i])
+        if (pc == breakpoints[i])
             return 1;
     }
 
@@ -234,12 +234,14 @@ static int console()
 /**
  * Called from sail every instruction.
  */
-unit debug_hook(unit u)
+unit debug_hook(sail_int sail_pc)
 {
-    if (g_prev_command == CONTINUE && !is_at_breakpoint())
+    unsigned long pc = mpz_get_ui(sail_pc);
+
+    if (g_prev_command == CONTINUE && !is_at_breakpoint(pc))
         return 0;
 
-    if (is_at_breakpoint())
+    if (is_at_breakpoint(pc))
         printf("Breakpoint reached %x\n", PC);
 
     while (console())
