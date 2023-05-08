@@ -74,7 +74,10 @@ function read_reg8(r) = {
         0b011 => reg_DE.lower(),
         0b100 => reg_HL.higher(),
         0b101 => reg_HL.lower(),
-        0b110 => read(reg_HL.bits()),
+        0b110 => { 
+            timing_tick_cycle();
+            read(reg_HL.bits())
+        },
         0b111 => reg_AF.higher()
     };
 }
@@ -88,7 +91,10 @@ function write_reg8(r, w) = {
         0b011 => reg_DE->lower() = w,
         0b100 => reg_HL->higher() = w,
         0b101 => reg_HL->lower() = w,
-        0b110 => write(reg_HL.bits(), w),
+        0b110 => { 
+            timing_tick_cycle();
+            write(reg_HL.bits(), w)
+        },
         0b111 => reg_AF->higher() = w
     };
 }
@@ -923,12 +929,13 @@ function clause assembly(INCR(r)) = concat_str("inc", concat_str("\t", reg8_str(
 /* r=r+1 */
 function clause execute(INCR(r)) = {
     timing_tick_cycle();
-    let res = read_reg8(r) + 1;
+    let regval = read_reg8(r);
+    let res = regval + 1;
 
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
         0b0,
-        if (((read_reg8(r) & 0x0F) + 0x01) & 0x10) != 0x00 then 0b1 else 0b0,
+        if (((regval & 0x0F) + 0x01) & 0x10) != 0x00 then 0b1 else 0b0,
         flag_c()
     );
 
@@ -940,12 +947,13 @@ function clause assembly(DECR(r)) = concat_str("dec", concat_str("\t", reg8_str(
 /* r=r-1 */
 function clause execute(DECR(r)) = {
     timing_tick_cycle();
-    let res = read_reg8(r) + -1;
+    let regval = read_reg8(r);
+    let res = regval + -1;
 
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
         0b1,
-        if (((read_reg8(r) & 0x0F) + 0x0F) & 0x10) != 0x00 then 0b1 else 0b0,
+        if (((regval & 0x0F) + 0x0F) & 0x10) != 0x00 then 0b1 else 0b0,
         flag_c()
     );
 
@@ -1142,8 +1150,9 @@ function clause assembly(RLCR(r)) = concat_str("rlc", concat_str("\t", reg8_str(
 /* rotate left */
 function clause execute(RLCR(r)) = {
     timing_tick_cycle();
-    let new_carry = truncate((read_reg8(r) >> 7) & 0x01, 1);
-    let new_reg = (read_reg8(r) << 1);
+    let regval = read_reg8(r);
+    let new_carry = truncate((regval >> 7) & 0x01, 1);
+    let new_reg = (regval << 1);
     write_reg8(r) = new_reg;
     set_flags(
         if new_reg == 0x00 then 0b1 else 0b0,
@@ -1159,8 +1168,9 @@ function clause assembly(RLR(r)) = concat_str("rl", concat_str("\t", reg8_str(r)
 /* rotate left through carry */
 function clause execute(RLR(r)) = {
     timing_tick_cycle();
-    let new_carry = truncate(read_reg8(r) >> 7, 1);
-    let new_reg = (read_reg8(r) << 1) | EXTZ(flag_c());
+    let regval = read_reg8(r);
+    let new_carry = truncate(regval >> 7, 1);
+    let new_reg = (regval << 1) | EXTZ(flag_c());
     write_reg8(r) = new_reg;
     set_flags(
         if new_reg == 0x00 then 0b1 else 0b0,
@@ -1176,8 +1186,9 @@ function clause assembly(RRCR(r)) = concat_str("rrc", concat_str("\t", reg8_str(
 /* rotate right */
 function clause execute(RRCR(r)) = {
     timing_tick_cycle();
-    let new_carry = truncate(read_reg8(r), 1);
-    let new_reg = (read_reg8(r) >> 1);
+    let regval = read_reg8(r);
+    let new_carry = truncate(regval, 1);
+    let new_reg = (regval >> 1);
     write_reg8(r) = new_reg;
     set_flags(
         if new_reg == 0x00 then 0b1 else 0b0,
@@ -1193,8 +1204,9 @@ function clause assembly(RRR(r)) = concat_str("rr", concat_str("\t", reg8_str(r)
 /* rotate right through carry */
 function clause execute(RRR(r)) = {
     timing_tick_cycle();
-    let new_carry = truncate(read_reg8(r) & 0x01, 1);
-    let new_reg = (read_reg8(r) >> 1) |  (EXTZ(flag_c()) << 7);
+    let regval = read_reg8(r);
+    let new_carry = truncate(regval & 0x01, 1);
+    let new_reg = (regval >> 1) |  (EXTZ(flag_c()) << 7);
     write_reg8(r) = new_reg;
     set_flags(
         if new_reg == 0x00 then 0b1 else 0b0,
@@ -1210,8 +1222,9 @@ function clause assembly(SLAR(r)) = concat_str("sla", concat_str("\t", reg8_str(
 /* shift left arithmetic (b0=0) */
 function clause execute(SLAR(r)) = {
     timing_tick_cycle();
-    let new_carry = truncate(read_reg8(r) >> 7, 1);
-    let new_reg = (read_reg8(r) << 1);
+    let regval = read_reg8(r);
+    let new_carry = truncate(regval >> 7, 1);
+    let new_reg = (regval << 1);
     write_reg8(r) = new_reg;
     set_flags(
         if new_reg == 0x00 then 0b1 else 0b0,
@@ -1226,12 +1239,14 @@ function clause assembly(SWAPR(r)) = concat_str("swap", concat_str("\t", reg8_st
 /* exchange low/hi-nibble */
 function clause execute(SWAPR(r)) = {
     timing_tick_cycle();
-    let low = read_reg8(r) & 0x0F;
-    let high = (read_reg8(r) & 0xF0) >> 4;
-    write_reg8(r) = (low << 4) | high;
+    let regval = read_reg8(r);
+    let low = regval & 0x0F;
+    let high = (regval & 0xF0) >> 4;
+    let newval = (low << 4) | high;
+    write_reg8(r) = newval;
 
     set_flags(
-        if read_reg8(r) == 0x00 then 0b1 else 0b0,
+        if newval == 0x00 then 0b1 else 0b0,
         0b0,
         0b0,
         0b0
@@ -1243,8 +1258,9 @@ function clause assembly(SRAR(r)) = concat_str("sra", concat_str("\t", reg8_str(
 /* shift right arithmetic (b7=b7) */
 function clause execute(SRAR(r)) = {
     timing_tick_cycle();
-    let new_carry = truncate(read_reg8(r), 1);
-    let new_reg = (read_reg8(r) >> 1) | (read_reg8(r) & 0x80);
+    let regval = read_reg8(r);
+    let new_carry = truncate(regval, 1);
+    let new_reg = (regval >> 1) | (regval & 0x80);
     write_reg8(r) = new_reg;
     set_flags(
         if new_reg == 0x00 then 0b1 else 0b0,
@@ -1260,12 +1276,13 @@ function clause assembly(SRLR(r)) = concat_str("srl", concat_str("\t", reg8_str(
 /* shift right logical (b7=0) */
 function clause execute(SRLR(r)) = {
     timing_tick_cycle();
-    let res = read_reg8(r) >> 1;
+    let regval = read_reg8(r);
+    let res = regval >> 1;
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
         0b0,
         0b0,
-        if (read_reg8(r) & 0x01) == 0x01 then 0b1 else 0b0 /* I think the least significant bit is rotated to the cary flag */
+        if (regval & 0x01) == 0x01 then 0b1 else 0b0 /* I think the least significant bit is rotated to the cary flag */
     );
     write_reg8(r) = res;
     true
