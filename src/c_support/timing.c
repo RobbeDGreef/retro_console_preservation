@@ -3,6 +3,7 @@
 
 #include "support.h"
 #include "timing.h"
+#include "timer.h"
 
 /* Sail stuff */
 extern sail_int zpassed_cycles;
@@ -73,16 +74,47 @@ void register_cycle_timing_callback(int cycles, timer_callback_t cb, void *arg)
     g_timer_callbacks = timer;
 }
 
-unit cycle_timer_update()
+void deregister_cycle_timing_callback(timer_callback_t cb)
 {
-    /* Update the timer */
-    timer_update(cycle);
     struct timer_callback *iter = g_timer_callbacks;
     struct timer_callback *prev = NULL;
 
     while (iter)
     {
-        if (get_passed_cycles() - iter->start_ms >= iter->cycles)
+        if (iter->cb == cb) {
+            if (prev == NULL)
+                g_timer_callbacks = iter->next;
+            else
+                prev->next = iter->next;
+
+            /* Set next iter */
+            struct timer_callback *old = iter;
+            iter = iter->next;
+
+            /* Memory management */
+            free(old);
+        }
+        else
+        {
+            prev = iter;
+            iter = iter->next;
+        }
+    }
+}
+
+unit cycle_timer_update()
+{
+    unsigned long cycle = get_passed_cycles();
+
+    /* Update the timer */
+    timer_update(cycle);
+
+    struct timer_callback *iter = g_timer_callbacks;
+    struct timer_callback *prev = NULL;
+
+    while (iter)
+    {
+        if (cycle - iter->start_ms >= iter->cycles)
         {
             /* Remove from list */
             if (prev == NULL)
@@ -90,16 +122,28 @@ unit cycle_timer_update()
             else
                 prev->next = iter->next;
 
+            /* Set next iter */
+            struct timer_callback *old = iter;
+            iter = iter->next;
+
             /* Call callback */
-            iter->cb(iter->arg);
+            old->cb(old->arg);
 
             /* Memory management */
-            free(iter);
+            free(old);
         }
-
-        prev = iter;
-        iter = iter->next;
+        else
+        {
+            prev = iter;
+            iter = iter->next;
+        }
     }
 
     return UNIT;
+}
+
+void timing_init()
+{
+    /* Pre init passed_cycles so we dont segfault on first cycle use */
+    mpz_init(PASSED_CYCLES);
 }
