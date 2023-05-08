@@ -75,6 +75,8 @@ void register_cycle_timing_callback(int cycles, timer_callback_t cb, void *arg)
 
 unit cycle_timer_update()
 {
+    /* Update the timer */
+    timer_update(cycle);
     struct timer_callback *iter = g_timer_callbacks;
     struct timer_callback *prev = NULL;
 

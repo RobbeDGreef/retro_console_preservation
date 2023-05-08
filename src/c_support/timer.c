@@ -1,70 +1,104 @@
-#include "memory.h"
-#include "timing.h"
-#include "debug.h"
+#include <stdbool.h>
 
-#define CPU_CLOCK 4194304UL
-#define TIMA_CLOCK_1 (4096UL * 100000000UL / CPU_CLOCK)
-#define TIMA_CLOCK_2 (262144UL * 100000000UL / CPU_CLOCK)
-#define TIMA_CLOCK_3 (65536UL * 100000000UL / CPU_CLOCK)
-#define TIMA_CLOCK_4 (16384UL * 100000000UL / CPU_CLOCK)
+#include "memory.h"
+#include "debug.h"
+#include "timing.h"
+#include "interrupts.h"
+
+/** 
+ * Recreated behavior of timer circuit as described in https://gbdev.io/pandocs/Timer_Obscure_Behaviour.html 
+ * code inspired by mooneye-gb https://github.com/Gekkio/mooneye-gb
+ */
+
+#define SYS_CLOCKS_PER_TICK 4
+
+#define INTERNAL_COUNTER_DIV_OFFSET 8
+
+//#define CPU_CLOCK 4194304UL
+//#define TIMA_CLOCK_1 4096UL
+//#define TIMA_CLOCK_2 262144UL
+//#define TIMA_CLOCK_3 65536UL
+//#define TIMA_CLOCK_4 16384UL
 
 #define TAC_ENABLE (1 << 2)
 #define TAC_DEFAULT_CLOCK_ID 0b00
 #define TAC_CLOCK_MASK 0b11
 
-#define TIMER_DIV_CLOCK 16384UL
-#define TIMER_TICKS_PER_10MIL_CYCLES (TIMER_DIV_CLOCK * 100000000 / CPU_CLOCK)
+//#define TIMER_DIV_CLOCK 16384UL
+//#define CALC_CLOCK_INTERVAL(clock) ((CPU_CLOCK / clock))
 
 int g_tima = 0;
-unsigned long g_tima_clock_per_million = 0;
-unsigned long g_last_tima_reset_cycle = 0;
-
-int g_div = 0;
-unsigned long g_last_div_read_cycle = 0;
-
 int g_tma = 0;
 int g_tac = 0;
 
+uint16_t g_internal_counter = 0;
+bool g_overflow_occured = false;
+
+/* Returns whether the current tac counter bit is set in the internal counter */
+static bool is_counter_bit_set() {
+    /* There bits represent the different timer speeds, they are defined inside the timer circuit https://gbdev.io/pandocs/Timer_Obscure_Behaviour.html */
+    int bit_lookup[] = {
+        [0b00] = 9,
+        [0b01] = 3,
+        [0b10] = 5,
+        [0b11] = 7,
+    };
+    return g_internal_counter & (1 << bit_lookup[g_tac & TAC_CLOCK_MASK]);
+}
+
+static void tima_increment() {
+    g_tima++;
+
+    /* Check whether the timer overflowed the 8 bit boundary */
+    if (g_tima == 0x100) {
+        g_overflow_occured = true;
+        g_tima = 0;
+    }
+}
+
+static bool is_tac_enabled() {
+    return (g_tac & TAC_ENABLE);
+}
+
 void io_write_div(uint64_t addr, int bytes, uint64_t val)
 {
-    // Writing any value to this register resets it to 0
-    g_div = 0;
-    /* -4 -4 because our cycle timing sets adds the cycle before executing the instruction*/
-    g_last_div_read_cycle = get_passed_cycles() - 8;
+    /* Writing any value resets the internal counter (and thus the div). */
+
+    /** 
+     * When the current counter bit is set to high, the tima will not increment until it goes
+     * low (see the falling edge detector in the circuit), this means that when this bit is high
+     * and the internal counter is reset, the bit will go low and thus the tima should increment.
+    */
+    if (is_counter_bit_set()) {
+        tima_increment();
+    }
+
+    g_internal_counter = 0;
 }
 
 uint64_t io_read_div(uint64_t addr, int bytes)
 {
-    /* Get current cycle, calculate what the timer should be */
-    unsigned long diff = (get_passed_cycles() - g_last_div_read_cycle);
-    printf("diff: %lu (%lu - %lu)\n", diff, get_passed_cycles(), g_last_div_read_cycle);
-    diff *= TIMER_TICKS_PER_10MIL_CYCLES;
-    printf("diff: %lu\n", diff);
-    diff /= 100000000;
-
-    printf("current time: %lu\n", diff);
-
-    return diff & 0xFF;
+    return g_internal_counter >> INTERNAL_COUNTER_DIV_OFFSET;
 }
 
 void io_write_tima(uint64_t addr, int bytes, uint64_t val)
 {
-    UNIMPLEMENTED("write to TIMA");
+    /* todo: I am pretty sure there is some obscure behavior that should be checked here */
+    g_tima = val;
 }
 
 uint64_t io_read_tima(uint64_t addr, int bytes)
 {
-    /* Calculate the value the timer should have */
-    unsigned long diff = (get_passed_cycles() - g_last_tima_reset_cycle);
-    diff *= g_tima_clock_per_million;
-    diff /= 100000000;
-
-    return diff & 0xFF;
+    printf("internal counter: %i tima: %i overflow: %i\n", g_internal_counter, g_tima, g_overflow_occured);
+    return g_tima;
 }
 
 void io_write_tma(uint64_t addr, int bytes, uint64_t val)
 {
     g_tma = val;
+    //if (g_overflow_occured) {
+    //    tima_increment();
+    //}
 }
 
 uint64_t io_read_tma(uint64_t addr, int bytes)
@@ -72,23 +106,24 @@ uint64_t io_read_tma(uint64_t addr, int bytes)
     return g_tma;
 }
 
-
 void io_write_tac(uint64_t addr, int bytes, uint64_t val)
 {
-    static unsigned long lookup[] = {
-        [0b00] = TIMA_CLOCK_1,
-        [0b01] = TIMA_CLOCK_2,
-        [0b10] = TIMA_CLOCK_3,
-        [0b11] = TIMA_CLOCK_4,
-    };
-
+    bool should_update = is_tac_enabled() && is_counter_bit_set();
     g_tac = val;
-    if (!(g_tac & TAC_ENABLE))
-    {
-        // disable timer interrupt
-    }
 
-    g_tima_clock_per_million = lookup[g_tac & TAC_CLOCK_MASK];
+    /* According to mooneye-gb this is necessary */
+    //if (!(is_tac_enabled() && is_counter_bit_set()) && should_update) {
+    //    tima_increment();
+    //}
+
+    if (is_tac_enabled())
+    {
+        interrupts_enable(INTERRUPT_TIMER);
+    }
+    else
+    {
+        interrupts_disable(INTERRUPT_TIMER);
+    }
 }
 
 uint64_t io_read_tac(uint64_t addr, int bytes)
@@ -96,21 +131,42 @@ uint64_t io_read_tac(uint64_t addr, int bytes)
     return g_tac;
 }
 
+/* Called from timing.c:cycle_timer_update (updated every tick) */
+void timer_update(unsigned long current_cycle)
+{
+    if (g_overflow_occured) {
+        g_internal_counter += SYS_CLOCKS_PER_TICK;
+
+        /* Set the timer to the modulo register and notify the system of the timing interrupt */
+        g_tima = g_tma;
+        interrupt(INTERRUPT_TIMER);
+
+        g_overflow_occured = false;
+    } else if (is_tac_enabled() && is_counter_bit_set()) {
+        g_internal_counter += SYS_CLOCKS_PER_TICK;
+        if (!is_counter_bit_set()) {
+            tima_increment();
+        }
+    } else {
+        g_internal_counter += SYS_CLOCKS_PER_TICK;
+    }
+    printf("internal counter: %i\n", g_internal_counter);
+}
+
 void timer_init()
 {
-    g_tac = TAC_ENABLE | TAC_DEFAULT_CLOCK_ID;
-    g_tima_clock_per_million = TIMA_CLOCK_1;
+    /* This first write is as a setup */
+    io_write_tac(0, 0, TAC_DEFAULT_CLOCK_ID | TAC_ENABLE);
 
     register_io_read_handler(0xFF04, io_read_div);
     register_io_write_handler(0xFF04, io_write_div);
-    
+
     register_io_read_handler(0xFF05, io_read_tima);
     register_io_write_handler(0xFF05, io_write_tima);
 
-    register_io_read_handler(0xFF05, io_read_tma);
-    register_io_write_handler(0xFF05, io_write_tma);
+    register_io_read_handler(0xFF06, io_read_tma);
+    register_io_write_handler(0xFF06, io_write_tma);
 
     register_io_read_handler(0xFF07, io_read_tac);
     register_io_write_handler(0xFF07, io_write_tac);
-    
 }
