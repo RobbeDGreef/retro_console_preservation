@@ -6,6 +6,7 @@
 
 #include "memory.h"
 #include "timing.h"
+#include "interrupts.h"
 
 #define DMA_CYCLE_DURATION (160 * 4 + 8)
 
@@ -17,6 +18,7 @@ enum ram_range
 	ECHO,
 	IO,
 	OAM,
+	IE,
 };
 
 io_read_handler_t g_read_handlers[IO_LENGTH] = {0};
@@ -62,7 +64,7 @@ void memory_copy(void *dst, uint64_t addr, int bytecount)
 
 inline static enum ram_range get_ram_range(uint64_t addr)
 {
-	if (addr >= IO_BASE && addr < IO_BASE + IO_LENGTH)
+	if ((addr >= IO_BASE && addr < IO_BASE + IO_LENGTH))
 		return IO;
 
 	else if (addr >= ECHO_RAM_BASE && addr < ECHO_RAM_BASE + ECHO_RAM_LENGTH)
@@ -70,6 +72,9 @@ inline static enum ram_range get_ram_range(uint64_t addr)
 
 	else if (addr >= OAM_BASE && addr < OAM_BASE + OAM_LENGTH)
 		return OAM;
+	
+	else if (addr == INTERRUPT_ENABLE_ADDR)
+		return IE;
 
 	return REGULAR;
 }
@@ -86,6 +91,9 @@ void custom_read_ram(lbits *data,
 
 	switch (get_ram_range(addr))
 	{
+	case IE:
+		mpz_set_ui(*data->bits, interrupt_get_ei());
+		return;
 	case IO:
 		if (get_io_read_handler(addr) != NULL)
 		{
@@ -134,6 +142,9 @@ bool custom_write_ram(const mpz_t addr_size,	 // unused
 
 	switch (get_ram_range(addr))
 	{
+	case IE:
+		interrupt_get_ei(mpz_get_ui(*data.bits));
+		return true;
 	case IO:
 		if (get_io_write_handler(addr) != NULL)
 		{
