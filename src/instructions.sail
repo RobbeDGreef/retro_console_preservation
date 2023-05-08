@@ -1299,8 +1299,8 @@ function clause assembly(LDFF00NNA(n)) = concat_str("LD\t(", concat_str(bits_str
 function clause execute(LDFF00NNA(n)) = {
     timing_tick_cycle();
     let res = read_reg8(reg8_name(A));
-    timing_tick_cycle();
     write(0xFF00 + EXTZ(n), res);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDAFF00NN(n)) = 12
@@ -1309,8 +1309,8 @@ function clause assembly(LDAFF00NN(n)) = concat_str("LD\tA, (", concat_str(bits_
 function clause execute(LDAFF00NN(n)) = {
     timing_tick_cycle();
     let res = read(0xFF00 + EXTZ(n));
-    timing_tick_cycle();
     write_reg8(reg8_name(A)) = res;
+    timing_tick_cycle(); 
     true
 }
 function clause get_cycles_per_instruction(LDFF00CA(n)) = 8
@@ -1319,8 +1319,8 @@ function clause assembly(LDFF00CA(n)) = concat_str("LD\t(", concat_str(bits_str(
 function clause execute(LDFF00CA()) = {
     timing_tick_cycle();
     let res = read_reg8(reg8_name(A));
-    timing_tick_cycle();
     write(0xFF00 + EXTZ(read_reg8(reg8_name(C))), res);
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(LDAFF00C(n)) = 8
@@ -1329,8 +1329,8 @@ function clause assembly(LDAFF00C(n)) = concat_str("LD\tA, (", concat_str(bits_s
 function clause execute(LDAFF00C(n)) = {
     timing_tick_cycle();
     let res = read(0xFF00 + EXTZ(read_reg8(reg8_name(C))));
-    timing_tick_cycle();
     write_reg8(reg8_name(A)) = res;
+    timing_tick_cycle();
     true
 }
 function clause get_cycles_per_instruction(BITNR(n, r)) = 8
