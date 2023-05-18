@@ -4,6 +4,7 @@
 #define INTERRUPT_ENABLE_ADDR 0xFFFF
 
 #define INTERRUPT_VBLANK (1 << 0)
+#define INTERRUPT_TIMER  (1 << 2)
 
 void interrupts_enable();
 void interrupt(int interrupt);
