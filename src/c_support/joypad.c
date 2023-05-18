@@ -27,12 +27,10 @@ int g_joyp = 0xFF;
 
 uint64_t io_read_joyp(uint64_t addr, int bytes)
 {
-    printf("read\n");
     return g_joyp;
 }
 void io_write_joyp(uint64_t addr, int bytes, uint64_t val)
 {
-    printf("selected: %x\n", val);
     g_joyp = (val & 0b000011) | (g_joyp & 0b111100);
 }
 

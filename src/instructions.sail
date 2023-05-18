@@ -1360,7 +1360,6 @@ function clause assembly(DI()) = "di"
 /* disable interrupts, IME=0 */
 function clause execute(DI()) = {
     timing_tick_cycle();
-    print("interrupts off");
     interrupt_master = 0x00;
     true
 }
@@ -1368,7 +1367,6 @@ function clause assembly(EI()) = "ei"
 /* enable interrupts, IME=1 */
 function clause execute(EI()) = {
     timing_tick_cycle();
-    print("interrupts on");
     interrupt_master = 0x01;
     true
 }
