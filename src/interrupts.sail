@@ -1,6 +1,6 @@
 val interrupt_service_routine : (word, word) -> unit
-function interrupt_service_routine(addr, bit) = {
-    /* Reset IF and IE */
+function interrupt_service_routine(int_addr, bit) = {
+    /* Reset IF */
     interrupt_flag = interrupt_flag & (~(0x01 << bit));
     interrupt_master = 0x00;
 
@@ -19,7 +19,7 @@ function interrupt_service_routine(addr, bit) = {
 
     /* Set pc to handler */
     timing_tick_cycle();
-    set_PC(EXTZ(addr));
+    set_PC(EXTZ(int_addr));
 }
 
 val check_for_interrupts : unit -> unit
