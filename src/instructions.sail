@@ -166,6 +166,11 @@ function flag_n() : (unit) -> bits(1) = reg_AF.n()
 function flag_h() : (unit) -> bits(1) = reg_AF.h()
 function flag_c() : (unit) -> bits(1) = reg_AF.c()
 
+val make_lsb : (imm16) -> imm16
+function make_lsb(b) = {
+    ((b & 0x00FF) << 8) | ((b >> 8) & 0x00FF);
+}
+
 scattered union ast
 
 union clause ast = INVALID : (bits(24))
@@ -435,24 +440,24 @@ function clause decode16 (inst16) = {
 /* 3 byte instructions */
 scattered function decode24
 
-function clause decode24 (0b11000011 @ n1 : imm8 @ n2 : imm8)
-    = JPNN(EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b110  @ c : cond @ 0b010 @ n1 : imm8 @ n2 : imm8)
-    = JPCNN(c, EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b11101010 @ n1 : imm8 @ n2 : imm8)
-    = LDNNA(EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b11111010 @ n1 : imm8 @ n2 : imm8)
-    = LDANN(EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b00 @ rr : regname16 @ 0b0001 @ n1 : imm8 @ n2 : imm8)
-    = LDRRNN(rr, EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b00001000 @ n1 : imm8 @ n2 : imm8)
-    = LDNNSP(EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b110 @ c : cond @ 0b010 @ n1 : imm8 @ n2 : imm8)
-    = JPFNN(c, EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b11001101 @ n1 : imm8 @ n2 : imm8)
-    = CALLNN(EXTZ(n2) << 8 | EXTZ(n1))
-function clause decode24 (0b110 @ c : cond @ 0b100 @ n1 : imm8 @ n2 : imm8)
-    = CALLFNN(c, EXTZ(n2) << 8 | EXTZ(n1))
+function clause decode24 (0b11000011 @ imm : imm16)
+    = JPNN(make_lsb(imm))
+function clause decode24 (0b110  @ c : cond @ 0b010 @ imm : imm16)
+    = JPCNN(c, make_lsb(imm))
+function clause decode24 (0b11101010 @ imm : imm16)
+    = LDNNA(make_lsb(imm))
+function clause decode24 (0b11111010 @ imm : imm16)
+    = LDANN(make_lsb(imm))
+function clause decode24 (0b00 @ rr : regname16 @ 0b0001 @ imm : imm16)
+    = LDRRNN(rr, make_lsb(imm))
+function clause decode24 (0b00001000 @ imm : imm16)
+    = LDNNSP(make_lsb(imm))
+function clause decode24 (0b110 @ c : cond @ 0b010 @ imm : imm16)
+    = JPFNN(c, make_lsb(imm))
+function clause decode24 (0b11001101 @ imm : imm16)
+    = CALLNN(make_lsb(imm))
+function clause decode24 (0b110 @ c : cond @ 0b100 @ imm : imm16)
+    = CALLFNN(c, make_lsb(imm))
 function clause decode24 (not_supported) 
     = INVALID(not_supported)
 
