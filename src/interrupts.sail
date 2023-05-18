@@ -24,34 +24,33 @@ function interrupt_service_routine(int_addr, bit) = {
 
 val check_for_interrupts : unit -> unit
 function check_for_interrupts() = {
-    if interrupt_master == 0x00 then
-        return
-
-    /* This cannot be a match since multiple interrupts can be waiting 
-       and thus multiple interrupts can be triggered here */
-    if ((interrupt_flag   & (0x01 << 0)) != 0x00) &
-       ((interrupt_enable & (0x01 << 0)) != 0x00) then {
-        /* vblank interrupt */
-        interrupt_service_routine(0x40, 0x00);
-    };
-    if ((interrupt_flag   & (0x01 << 1)) != 0x00) &
-       ((interrupt_enable & (0x01 << 1)) != 0x00) then {
-        /* LCD stat interrupt */
-        interrupt_service_routine(0x48, 0x01);
-    };
-    if ((interrupt_flag   & (0x01 << 2)) != 0x00) &
-       ((interrupt_enable & (0x01 << 2)) != 0x00) then {
-        /* timer interrupt */
-        interrupt_service_routine(0x50, 0x02);
-    };
-    if ((interrupt_flag   & (0x01 << 3)) != 0x00) &
-       ((interrupt_enable & (0x01 << 3)) != 0x00) then {
-        /* serial interrupt */
-        interrupt_service_routine(0x58, 0x03);
-    };
-    if ((interrupt_flag   & (0x01 << 4)) != 0x00) &
-       ((interrupt_enable & (0x01 << 4)) != 0x00) then {
-        /* joypad interrupt */
-        interrupt_service_routine(0x60, 0x04);
+    if interrupt_master != 0x00 then {
+        /* This cannot be a match since multiple interrupts can be waiting 
+           and thus multiple interrupts can be triggered here */
+        if ((interrupt_flag   & (0x01 << 0)) != 0x00) &
+           ((interrupt_enable & (0x01 << 0)) != 0x00) then {
+            /* vblank interrupt */
+            interrupt_service_routine(0x40, 0x00);
+        };
+        if ((interrupt_flag   & (0x01 << 1)) != 0x00) &
+           ((interrupt_enable & (0x01 << 1)) != 0x00) then {
+            /* LCD stat interrupt */
+            interrupt_service_routine(0x48, 0x01);
+        };
+        if ((interrupt_flag   & (0x01 << 2)) != 0x00) &
+           ((interrupt_enable & (0x01 << 2)) != 0x00) then {
+            /* timer interrupt */
+            interrupt_service_routine(0x50, 0x02);
+        };
+        if ((interrupt_flag   & (0x01 << 3)) != 0x00) &
+           ((interrupt_enable & (0x01 << 3)) != 0x00) then {
+            /* serial interrupt */
+            interrupt_service_routine(0x58, 0x03);
+        };
+        if ((interrupt_flag   & (0x01 << 4)) != 0x00) &
+           ((interrupt_enable & (0x01 << 4)) != 0x00) then {
+            /* joypad interrupt */
+            interrupt_service_routine(0x60, 0x04);
+        };
     };
 }
