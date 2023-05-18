@@ -27,6 +27,8 @@
 #define VSCAN_MAX 153
 #define HSCAN_MAX 160
 
+#define VBLANK_START 144
+
 #define OBJTILES_ADDR 0x8000
 #define OAM_SPRITE_COUNT 40
 
@@ -274,6 +276,11 @@ static void draw_screen(unsigned long start_time)
 
         pthread_spin_lock(&g_vscan_lock);
         g_vscan++;
+        
+        if (g_vscan == VBLANK_START) {
+            interrupt(INTERRUPT_VBLANK);
+        }
+
         pthread_spin_unlock(&g_vscan_lock);
 
         unsigned long scanline_duration = (micros() - scan_start);
