@@ -143,7 +143,7 @@ bool custom_write_ram(const mpz_t addr_size,	 // unused
 	switch (get_ram_range(addr))
 	{
 	case IE:
-		interrupt_get_ei(mpz_get_ui(*data.bits));
+		interrupt_set_ei(mpz_get_ui(*data.bits));
 		return true;
 	case IO:
 		if (get_io_write_handler(addr) != NULL)
