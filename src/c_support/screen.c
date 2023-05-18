@@ -8,6 +8,7 @@
 #include "memory.h"
 #include "debug.h"
 #include "timing.h"
+#include "interrupts.h"
 #include "joypad.h"
 
 #define DBG_FAKE_VLINE 0
@@ -43,6 +44,8 @@
 #define OBJ_SIZE (1 << 2)
 #define OBJ_ENABLE (1 << 1)
 #define BG_WINDOW_PRIORITY_ENABLE (1 << 0)
+
+#define STAT_MODE_1 0b0100000
 
 /* Simply to write less boilerplate code, creates the functions and registrations for us */
 #define DEF_IO_SIMPLE_VALUE(name, varname, lockname)             \
@@ -373,7 +376,14 @@ uint64_t io_read_lcd_y(uint64_t addr, int bytes)
 
 uint64_t io_read_lcd_stat(uint64_t addr, int bytes)
 {
-    UNIMPLEMENTED("lcd read stat register");
+    /* todo: this is only a very small part of this register */
+    int value = 0;
+    pthread_spin_lock(&g_vscan_lock);
+    if (g_vscan >= VBLANK_START) {
+        value |= STAT_MODE_1;
+    }
+    pthread_spin_unlock(&g_vscan_lock);
+    return value;
 }
 
 DEF_IO_SIMPLE_VALUE(lcd_control, g_lcd_control, g_lcd_control_lock)
