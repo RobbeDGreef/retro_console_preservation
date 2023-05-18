@@ -22,6 +22,9 @@ run: $(ROM)
 
 build: $(EMULATOR)
 
+docs:
+	sail -o $(LATEX_OUT) -latex src/main.sail
+
 c_files:
 	sail -c -O src/main.sail -o $(C_OUT_DIR)/main -c_include "support.h" -c_no_main # -verbose 1 -dtc_verbose 1
 
