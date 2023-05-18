@@ -81,38 +81,6 @@ void joypad_update(SDL_Event *event)
         }
         break;
     }
-    /*
-    case SDL_KEYUP:
-                int key = event->key.keysym.sym;
-        switch (key) {
-        case KEYSYM_UP:
-            g_joyp = KEYUP(g_joyp, JOYP_UP, JOYP_DIRECTION_BTNS);
-            break;
-        case KEYSYM_DOWN:
-            g_joyp = KEYUP(g_joyp, JOYP_DOWN, JOYP_DIRECTION_BTNS);
-            break;
-        case KEYSYM_LEFT:
-            g_joyp = KEYUP(g_joyp, JOYP_LEFT, JOYP_DIRECTION_BTNS);
-            break;
-        case KEYSYM_RIGHT:
-            g_joyp = KEYUP(g_joyp, JOYP_RIGHT, JOYP_DIRECTION_BTNS);
-            break;
-        case 'a':
-            g_joyp = KEYUP(g_joyp, JOYP_A, JOYP_ACTION_BTNS);
-            break;
-        case 'b':
-            g_joyp = KEYUP(g_joyp, JOYP_B, JOYP_ACTION_BTNS);
-            break;
-        case 's':
-            g_joyp = KEYUP(g_joyp, JOYP_START, JOYP_ACTION_BTNS);
-            break;
-        case 'd':
-            g_joyp = KEYUP(g_joyp, JOYP_SELECT, JOYP_ACTION_BTNS);
-            break;
-        }
-        interrupt(INTERRUPT_JOYPAD);
-        break;
-    */
     default:
         break;
     }

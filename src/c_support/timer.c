@@ -14,18 +14,9 @@
 
 #define INTERNAL_COUNTER_DIV_OFFSET 8
 
-//#define CPU_CLOCK 4194304UL
-//#define TIMA_CLOCK_1 4096UL
-//#define TIMA_CLOCK_2 262144UL
-//#define TIMA_CLOCK_3 65536UL
-//#define TIMA_CLOCK_4 16384UL
-
 #define TAC_ENABLE (1 << 2)
 #define TAC_DEFAULT_CLOCK_ID 0b00
 #define TAC_CLOCK_MASK 0b11
-
-//#define TIMER_DIV_CLOCK 16384UL
-//#define CALC_CLOCK_INTERVAL(clock) ((CPU_CLOCK / clock))
 
 int g_tima = 0;
 int g_tma = 0;
@@ -89,7 +80,6 @@ void io_write_tima(uint64_t addr, int bytes, uint64_t val)
 
 uint64_t io_read_tima(uint64_t addr, int bytes)
 {
-    printf("internal counter: %i tima: %i overflow: %i\n", g_internal_counter, g_tima, g_overflow_occured);
     return g_tima;
 }
 
@@ -112,17 +102,8 @@ void io_write_tac(uint64_t addr, int bytes, uint64_t val)
     g_tac = val;
 
     /* According to mooneye-gb this is necessary */
-    //if (!(is_tac_enabled() && is_counter_bit_set()) && should_update) {
-    //    tima_increment();
-    //}
-
-    if (is_tac_enabled())
-    {
-        interrupts_enable(INTERRUPT_TIMER);
-    }
-    else
-    {
-        interrupts_disable(INTERRUPT_TIMER);
+    if (!(is_tac_enabled() && is_counter_bit_set()) && should_update) {
+        tima_increment();
     }
 }
 
@@ -150,7 +131,6 @@ void timer_update(unsigned long current_cycle)
     } else {
         g_internal_counter += SYS_CLOCKS_PER_TICK;
     }
-    printf("internal counter: %i\n", g_internal_counter);
 }
 
 void timer_init()
