@@ -2,7 +2,7 @@ val interrupt_service_routine : (word, word) -> unit
 function interrupt_service_routine(addr, bit) = {
     /* Reset IF and IE */
     interrupt_flag = interrupt_flag & (~(0x01 << bit));
-    interrupt_enable = interrupt_enable & (~(0x01 << bit));
+    interrupt_master = 0x00;
 
     /* 2 NOPs */
     timing_tick_cycle();
