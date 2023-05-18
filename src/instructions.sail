@@ -373,24 +373,24 @@ function clause decode (inst8) = {
 /* 2 byte instructions */
 scattered function decode16
 
-function clause decode16 (0b00 @ r : regname @ 0b110 @ n : imm8)
-    = LDRN(r, n)
-function clause decode16 (0b11110110 @ n : imm8)
-    = ORN(n)
-function clause decode16 (0b11111110 @ n : imm8)
-    = CPN(n)
-function clause decode16 (0b11101110 @ n : imm8)
-    = XORN(n)
-function clause decode16 (0b11000110 @ n : imm8)
-    = ADDAN(n)
-function clause decode16 (0b11001110 @ n : imm8)
-    = ADCAN(n)
-function clause decode16 (0b11010110 @ n : imm8)
-    = SUBN(n)
-function clause decode16 (0b11011110 @ n : imm8)
-    = SBCAN(n)
-function clause decode16 (0b11100110 @ n : imm8)
-    = ANDN(n)
+function clause decode16 (0b00 @ r : regname @ 0b110 @ imm : imm8)
+    = LDRN(r, imm)
+function clause decode16 (0b11110110 @ imm : imm8)
+    = ORN(imm)
+function clause decode16 (0b11111110 @ imm : imm8)
+    = CPN(imm)
+function clause decode16 (0b11101110 @ imm : imm8)
+    = XORN(imm)
+function clause decode16 (0b11000110 @ imm : imm8)
+    = ADDAN(imm)
+function clause decode16 (0b11001110 @ imm : imm8)
+    = ADCAN(imm)
+function clause decode16 (0b11010110 @ imm : imm8)
+    = SUBN(imm)
+function clause decode16 (0b11011110 @ imm : imm8)
+    = SBCAN(imm)
+function clause decode16 (0b11100110 @ imm : imm8)
+    = ANDN(imm)
 function clause decode16 (0b11001011 @ 0b00000 @ r : regname)
     = RLCR(r)
 function clause decode16 (0b11001011 @ 0b00010 @ r : regname)
@@ -407,14 +407,14 @@ function clause decode16 (0b11001011 @ 0b00101 @ r : regname)
     = SRAR(r)
 function clause decode16 (0b11001011 @ 0b00111 @ r : regname)
     = SRLR(r)
-function clause decode16 (0b00011000 @ n : imm8)
-    = JRNN(n)
-function clause decode16 (0b001 @ c : cond @ 0b000 @ n : imm8)
-    = JRCN(c, n)
-function clause decode16 (0b11100000 @ n : imm8)
-    = LDFF00NNA(n)
-function clause decode16 (0b11110000 @ n : imm8)
-    = LDAFF00NN(n)
+function clause decode16 (0b00011000 @ imm : imm8)
+    = JRNN(imm)
+function clause decode16 (0b001 @ c : cond @ 0b000 @ imm : imm8)
+    = JRCN(c, imm)
+function clause decode16 (0b11100000 @ imm : imm8)
+    = LDFF00NNA(imm)
+function clause decode16 (0b11110000 @ imm : imm8)
+    = LDAFF00NN(imm)
 function clause decode16 (0b11101000 @ d : imm8)
     = ADDSPD(d)
 function clause decode16 (0b11111000 @ d : imm8)
@@ -461,8 +461,6 @@ function clause decode24 (0b110 @ c : cond @ 0b100 @ imm : imm16)
 function clause decode24 (not_supported) 
     = INVALID(not_supported)
 
-// todo: rename n and nn because of confusion with the nibble concept
-
 /* Execute instruction code */
 val execute : ast -> bool
 scattered function execute
@@ -477,13 +475,13 @@ function clause execute(INVALID(instr)) = {
     false
 }
 
-function clause assembly(JPCNN(c, nn)) = concat_str("JP\t, ", concat_str(cond_str(c), concat_str(", ", bits_str(nn))))
+function clause assembly(JPCNN(c, imm_16)) = concat_str("JP\t, ", concat_str(cond_str(c), concat_str(", ", bits_str(imm_16))))
 /* if c: PC = nn */
-function clause execute(JPCNN(c, nn)) = {
+function clause execute(JPCNN(c, imm_16)) = {
     timing_tick_cycle();
     if condition_true(c) then { 
         timing_tick_cycle();
-        set_PC(nn);
+        set_PC(imm_16);
     };
     true
 }
@@ -495,11 +493,11 @@ function clause execute(LDRR(r1, r2)) = {
     write_reg8(r1) = read_reg8(r2);
     true
 }
-function clause assembly(LDRN(r, n)) = concat_str(concat_str("ld", concat_str("\t", reg8_str(r))), concat_str(", ", bits_str(n)))
+function clause assembly(LDRN(r, imm_8)) = concat_str(concat_str("ld", concat_str("\t", reg8_str(r))), concat_str(", ", bits_str(imm_8)))
 /* r=n */
-function clause execute(LDRN(r, n)) = {
+function clause execute(LDRN(r, imm_8)) = {
     timing_tick_cycle();
-    write_reg8(r) = n;
+    write_reg8(r) = imm_8;
     true
 }
 function clause assembly(LDABC()) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", "(BC)"))
@@ -520,13 +518,13 @@ function clause execute(LDADE()) = {
     write_reg8(reg8_name(A)) = read(addr);
     true
 }
-function clause assembly(LDANN(nn)) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", concat_str(concat_str("(", bits_str((nn))), ")")))
+function clause assembly(LDANN(imm_16)) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", concat_str(concat_str("(", bits_str((imm_16))), ")")))
 /* A=(nn) */
-function clause execute(LDANN(nn)) = {
+function clause execute(LDANN(imm_16)) = {
     timing_tick_cycle();
     /* in real cpu this would probably set the addr on the line */
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = read(nn);
+    write_reg8(reg8_name(A)) = read(imm_16);
     true
 }
 function clause assembly(LDBCA()) = concat_str(concat_str("ld", concat_str("\t", "(BC)")), concat_str(", ", "A"))
@@ -547,11 +545,11 @@ function clause execute(LDDEA()) = {
     write(addr) = read_reg8(reg8_name(A));
     true
 }
-function clause assembly(LDNNA(nn)) = concat_str(concat_str("ld", concat_str("\t", concat_str(concat_str("(", bits_str((nn))), ")"))), concat_str(", ", "A"))
+function clause assembly(LDNNA(imm_16)) = concat_str(concat_str("ld", concat_str("\t", concat_str(concat_str("(", bits_str((imm_16))), ")"))), concat_str(", ", "A"))
 /* (nn)=A */
-function clause execute(LDNNA(nn)) = {
+function clause execute(LDNNA(imm_16)) = {
     timing_tick_cycle();
-    let addr = nn;
+    let addr = imm_16;
     timing_tick_cycle();
     write(addr) = read_reg8(reg8_name(A));
     true
@@ -596,21 +594,21 @@ function clause execute(LDDAHL()) = {
     write_reg16(reg16_name(HL)) = hlval + -1;
     true
 }
-function clause assembly(LDRRNN(rr, nn)) = concat_str(concat_str("ld", concat_str("\t", reg16_str(rr))), concat_str(", ", bits_str(nn)))
+function clause assembly(LDRRNN(rr, imm_16)) = concat_str(concat_str("ld", concat_str("\t", reg16_str(rr))), concat_str(", ", bits_str(imm_16)))
 /* rr=nn (rr may be BC,DE,HL or SP) */
-function clause execute(LDRRNN(rr, nn)) = {
+function clause execute(LDRRNN(rr, imm_16)) = {
     timing_tick_cycle();
-    write_reg16(rr) = nn;
+    write_reg16(rr) = imm_16;
     true
 }
-function clause assembly(LDNNSP(nn)) = concat_str(concat_str("ld", concat_str("\t", concat_str(concat_str("(", bits_str((nn))), ")"))), concat_str(", ", "SP"))
+function clause assembly(LDNNSP(imm_16)) = concat_str(concat_str("ld", concat_str("\t", concat_str(concat_str("(", bits_str((imm_16))), ")"))), concat_str(", ", "SP"))
 /* (nn)=SP */
-function clause execute(LDNNSP(nn)) = {
+function clause execute(LDNNSP(imm_16)) = {
     let sp = read_reg16(reg16_name(SP));
     timing_tick_cycle();
-    write(nn) = truncate(sp, 8);
+    write(imm_16) = truncate(sp, 8);
     timing_tick_cycle();
-    write(nn+1) = truncate((sp >> 8), 8);
+    write(imm_16+1) = truncate((sp >> 8), 8);
     timing_tick_cycle();
     true
 }
@@ -680,11 +678,11 @@ function clause execute(ADDAR(r)) = {
     write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), read_reg8(r));
     true
 }
-function clause assembly(ADDAN(n)) = concat_str(concat_str("add", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
+function clause assembly(ADDAN(imm_8)) = concat_str(concat_str("add", concat_str("\t", "A")), concat_str(", ", bits_str(imm_8)))
 /* A=A+n */
-function clause execute(ADDAN(n)) = {
+function clause execute(ADDAN(imm_8)) = {
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), n);
+    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), imm_8);
     true
 }
 
@@ -710,11 +708,11 @@ function clause execute(ADCAR(r)) = {
     write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), read_reg8(r), EXTZ(flag_c()));
     true
 }
-function clause assembly(ADCAN(n)) = concat_str(concat_str("adc", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
+function clause assembly(ADCAN(imm_8)) = concat_str(concat_str("adc", concat_str("\t", "A")), concat_str(", ", bits_str(imm_8)))
 /* A=A+n+cy */
-function clause execute(ADCAN(n)) = {
+function clause execute(ADCAN(imm_8)) = {
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), n, EXTZ(flag_c()));
+    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), imm_8, EXTZ(flag_c()));
     true
 }
 function clause assembly(SUBR(r)) = concat_str("sub", concat_str("\t", reg8_str(r)))
@@ -730,11 +728,11 @@ function clause execute(SUBR(r)) = {
     );
     true
 }
-function clause assembly(SUBN(n)) = concat_str("sub", concat_str("\t", bits_str(n)))
+function clause assembly(SUBN(imm_8)) = concat_str("sub", concat_str("\t", bits_str(imm_8)))
 /* A=A-n */
-function clause execute(SUBN(n)) = {
+function clause execute(SUBN(imm_8)) = {
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), 0x00 - n);
+    write_reg8(reg8_name(A)) = add(read_reg8(reg8_name(A)), 0x00 - imm_8);
     set_flags(
         flag_z(),
         0b1,
@@ -757,11 +755,11 @@ function clause execute(SBCAR(r)) = {
     );
     true
 }
-function clause assembly(SBCAN(n)) = concat_str(concat_str("sbc", concat_str("\t", "A")), concat_str(", ", bits_str(n)))
+function clause assembly(SBCAN(imm_8)) = concat_str(concat_str("sbc", concat_str("\t", "A")), concat_str(", ", bits_str(imm_8)))
 /* A=A-n-cy */
-function clause execute(SBCAN(n)) = {
+function clause execute(SBCAN(imm_8)) = {
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), 0x00 - n, 0x00 - EXTZ(flag_c()));
+    write_reg8(reg8_name(A)) = adc(read_reg8(reg8_name(A)), 0x00 - imm_8, 0x00 - EXTZ(flag_c()));
     set_flags(
         flag_z(),
         0b1,
@@ -786,11 +784,11 @@ function clause execute(ANDR(r)) = {
     write_reg8(reg8_name(A)) = res;
     true
 }
-function clause assembly(ANDN(n)) = concat_str("and", concat_str("\t", bits_str(n)))
+function clause assembly(ANDN(imm_8)) = concat_str("and", concat_str("\t", bits_str(imm_8)))
 /* A=A & n */
-function clause execute(ANDN(n)) = {
+function clause execute(ANDN(imm_8)) = {
     timing_tick_cycle();
-    let res = read_reg8(reg8_name(A)) & n;
+    let res = read_reg8(reg8_name(A)) & imm_8;
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
         0b0,
@@ -814,11 +812,11 @@ function clause execute(XORR(r)) = {
     write_reg8(reg8_name(A)) = res;
     true
 }
-function clause assembly(XORN(n)) = concat_str("xor", concat_str("\t", bits_str(n)))
+function clause assembly(XORN(imm_8)) = concat_str("xor", concat_str("\t", bits_str(imm_8)))
 /* A=A xor n */
-function clause execute(XORN(n)) = {
+function clause execute(XORN(imm_8)) = {
     timing_tick_cycle();
-    let res = read_reg8(reg8_name(A)) ^ n;
+    let res = read_reg8(reg8_name(A)) ^ imm_8;
 
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
@@ -845,11 +843,11 @@ function clause execute(ORR(r)) = {
     write_reg8(reg8_name(A)) = res;
     true
 }
-function clause assembly(ORN(n)) = concat_str("or", concat_str("\t", bits_str(n)))
+function clause assembly(ORN(imm_8)) = concat_str("or", concat_str("\t", bits_str(imm_8)))
 /* A=A \ */
-function clause execute(ORN(n)) = {
+function clause execute(ORN(imm_8)) = {
     timing_tick_cycle();
-    let res = read_reg8(reg8_name(A)) | n;
+    let res = read_reg8(reg8_name(A)) | imm_8;
 
     set_flags(
         if res == 0x00 then 0b1 else 0b0,
@@ -876,11 +874,11 @@ function clause execute(CPR(r)) = {
     true
 }
 
-function clause assembly(CPN(n)) = concat_str("cp", concat_str("\t", bits_str(n)))
+function clause assembly(CPN(imm_8)) = concat_str("cp", concat_str("\t", bits_str(imm_8)))
 /* compare A-n */
-function clause execute(CPN(n)) = {
+function clause execute(CPN(imm_8)) = {
     timing_tick_cycle();
-    let useless = add(read_reg8(reg8_name(A)), 0x00 - n);
+    let useless = add(read_reg8(reg8_name(A)), 0x00 - imm_8);
 
     set_flags(
         flag_z(),
@@ -1241,36 +1239,36 @@ function clause execute(JRNN(d)) = {
     set_PC(PC + EXTS(d));
     true
 }
-function clause assembly(JRCN(c, n)) = concat_str("jr\t", concat_str(cond_str(c), concat_str(", PC+", concat_str(bits_str(n), concat_str("\t# ", bits_str(PC + EXTS(n)))))))
+function clause assembly(JRCN(c, imm_8)) = concat_str("jr\t", concat_str(cond_str(c), concat_str(", PC+", concat_str(bits_str(imm_8), concat_str("\t# ", bits_str(PC + EXTS(imm_8)))))))
 /* conditional relative jump if nz,z,nc,c */
-function clause execute(JRCN(c, n)) = {
+function clause execute(JRCN(c, imm_8)) = {
     timing_tick_cycle();
     if condition_true(c) then {
         timing_tick_cycle();
-        set_PC(PC + EXTS(n));
+        set_PC(PC + EXTS(imm_8));
     };
 
     true
 }
-function clause assembly(LDFF00NNA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00 + EXTZ(n)), "), A"))
+function clause assembly(LDFF00NNA(imm_8)) = concat_str("LD\t(", concat_str(bits_str(0xFF00 + EXTZ(imm_8)), "), A"))
 /* write to io-port n (memory FF00+n) */
-function clause execute(LDFF00NNA(n)) = {
+function clause execute(LDFF00NNA(imm_8)) = {
     timing_tick_cycle();
-    let addr = 0xFF00 + EXTZ(n);
+    let addr = 0xFF00 + EXTZ(imm_8);
     timing_tick_cycle();
     write(addr) = read_reg8(reg8_name(A)); 
     true
 }
-function clause assembly(LDAFF00NN(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00 + EXTZ(n)), ")"))
+function clause assembly(LDAFF00NN(imm_8)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00 + EXTZ(imm_8)), ")"))
 /* read from io-port n (memory FF00+n) */
-function clause execute(LDAFF00NN(n)) = {
+function clause execute(LDAFF00NN(imm_8)) = {
     timing_tick_cycle();
-    let addr = 0xFF00 + EXTZ(n);
+    let addr = 0xFF00 + EXTZ(imm_8);
     timing_tick_cycle();
     write_reg8(reg8_name(A)) = read(addr);
     true
 }
-function clause assembly(LDFF00CA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00), "+C), A"))
+function clause assembly(LDFF00CA()) = concat_str("LD\t(", concat_str(bits_str(0xFF00), "+C), A"))
 /* write to io-port C (memory FF00+C) */
 function clause execute(LDFF00CA()) = {
     timing_tick_cycle();
@@ -1279,21 +1277,21 @@ function clause execute(LDFF00CA()) = {
     write(addr) = read_reg8(reg8_name(A));
     true
 }
-function clause assembly(LDAFF00C(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00), "+C)"))
+function clause assembly(LDAFF00C()) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00), "+C)"))
 /* read from io-port n (memory FF00+n) */
-function clause execute(LDAFF00C(n)) = {
+function clause execute(LDAFF00C()) = {
     timing_tick_cycle();
     let addr = 0xFF00 + EXTZ(read_reg8(reg8_name(C)));
     timing_tick_cycle();
     write_reg8(reg8_name(A)) = read(addr);
     true
 }
-function clause assembly(BITNR(n, r)) = concat_str(concat_str("bit", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
+function clause assembly(BITNR(bit, r)) = concat_str(concat_str("bit", concat_str("\t", bits_str(bit))), concat_str(", ", reg8_str(r)))
 /* test bit n */
-function clause execute(BITNR(n, r)) = {
+function clause execute(BITNR(bit, r)) = {
     timing_tick_cycle();
     let regval = read_reg8(r);
-    let res = regval & (0x01 << n);
+    let res = regval & (0x01 << bit);
     set_flags(
         if res != 0x00 then 0b0 else 0b1,
         0b0,
@@ -1302,19 +1300,19 @@ function clause execute(BITNR(n, r)) = {
     );
     true
 }
-function clause assembly(SETNR(n, r)) = concat_str(concat_str("set", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
+function clause assembly(SETNR(bit, r)) = concat_str(concat_str("set", concat_str("\t", bits_str(bit))), concat_str(", ", reg8_str(r)))
 /* set bit n */
-function clause execute(SETNR(n, r)) = {
+function clause execute(SETNR(bit, r)) = {
     timing_tick_cycle();
-    write_reg8(r) = read_reg8(r) | (0x01 << n);
+    write_reg8(r) = read_reg8(r) | (0x01 << bit);
     true
 }
-function clause assembly(RESNR(n, r)) = concat_str(concat_str("res", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
+function clause assembly(RESNR(bit, r)) = concat_str(concat_str("res", concat_str("\t", bits_str(bit))), concat_str(", ", reg8_str(r)))
 /* reset bit n */
-function clause execute(RESNR(n, r)) = {
+function clause execute(RESNR(bit, r)) = {
     timing_tick_cycle();
     
-    write_reg8(r) = read_reg8(r) & ~(0x01 << n);
+    write_reg8(r) = read_reg8(r) & ~(0x01 << bit);
     true
 }
 function clause assembly(CCF()) = "ccf"
@@ -1375,12 +1373,12 @@ function clause execute(EI()) = {
     interrupt_master = 0x01;
     true
 }
-function clause assembly(JPNN(nn)) = concat_str("jp", concat_str("\t", bits_str(nn)))
+function clause assembly(JPNN(imm_16)) = concat_str("jp", concat_str("\t", bits_str(imm_16)))
 /* jump to nn, PC=nn */
-function clause execute(JPNN(nn)) = {
+function clause execute(JPNN(imm_16)) = {
     timing_tick_cycle();
     timing_tick_cycle();
-    set_PC(nn);
+    set_PC(imm_16);
     true
 }
 function clause assembly(JPHL()) = concat_str("jp", concat_str("\t", "HL"))
@@ -1390,16 +1388,16 @@ function clause execute(JPHL()) = {
     set_PC(read_reg16(reg16_name(HL)));
     true
 }
-function clause assembly(JPFNN(c, nn)) = "JP    c, nn"
+function clause assembly(JPFNN(c, imm_16)) = "JP    c, nn"
 /* conditional jump if nz,z,nc,c */
-function clause execute(JPFNN(c, nn)) = {
+function clause execute(JPFNN(c, imm_16)) = {
     /* todo: implement me */
     throw(error_not_implemented("JPFNN"));
     true
 }
-function clause assembly(CALLNN(nn)) = concat_str("call", concat_str("\t", bits_str(nn)))
+function clause assembly(CALLNN(imm_16)) = concat_str("call", concat_str("\t", bits_str(imm_16)))
 /* call to nn, SP=SP-2, (SP)=PC, PC=nn */
-function clause execute(CALLNN(nn)) = {
+function clause execute(CALLNN(imm_16)) = {
     timing_tick_cycle();
 
     let addr = read_reg16(reg16_name(SP)) + -2;
@@ -1410,14 +1408,14 @@ function clause execute(CALLNN(nn)) = {
     timing_tick_cycle();
     write(addr + 0, truncate(PC & 0x00FF, 8));
     timing_tick_cycle();
-    set_PC(nn);
+    set_PC(imm_16);
     true
 }
-function clause assembly(CALLFNN(c, nn)) = concat_str("call", concat_str("\t", concat_str(concat_str(cond_str(c), ", "), bits_str(nn))))
+function clause assembly(CALLFNN(c, imm_16)) = concat_str("call", concat_str("\t", concat_str(concat_str(cond_str(c), ", "), bits_str(imm_16))))
 /* conditional call if nz,z,nc,c */
-function clause execute(CALLFNN(c, nn)) = {
+function clause execute(CALLFNN(c, imm_16)) = {
     if condition_true(c) then 
-        execute(CALLNN(nn))
+        execute(CALLNN(imm_16))
     else
     {
         timing_tick_cycle();
@@ -1472,9 +1470,9 @@ function clause execute(RETI()) = {
     true
 
 }
-function clause assembly(RSTN(n)) = concat_str("rst", concat_str("\t", bits_str(n)))
+function clause assembly(RSTN(imm_3)) = concat_str("rst", concat_str("\t", bits_str(imm_3)))
 /* call to 00,08,10,18,20,28,30,38 */
-function clause execute(RSTN(n)) = {
+function clause execute(RSTN(imm_3)) = {
     /* todo: I think this is correct but I am not sure */
-    execute(CALLNN(EXTZ(n) << 3));
+    execute(CALLNN(EXTZ(imm_3) << 3));
 }
