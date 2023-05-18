@@ -44,16 +44,25 @@ C_SUPPORT_HEADERS = src/c_support/
 #ROM = test_roms/drmario.gb
 
 # GB test roms
-# ROM = test_roms/gb-test-roms/cpu_instrs/cpu_instrs.gb
-#ROM = test_roms/gb-test-roms/instr_timing/instr_timing.gb
+#ROM = test_roms/gb-test-roms/cpu_instrs/cpu_instrs.gb
+ROM = test_roms/gb-test-roms/instr_timing/instr_timing.gb
 #ROM = test_roms/gb-test-roms/mem_timing/individual/01-read_timing.gb
 #ROM = test_roms/gb-test-roms/mem_timing/individual/02-write_timing.gb
-ROM = test_roms/gb-test-roms/mem_timing/individual/03-modify_timing.gb
+#ROM = test_roms/gb-test-roms/mem_timing/individual/03-modify_timing.gb
 
 # Individual CPU instr roms
 # ROM = test_roms/gb-test-roms/cpu_instrs/individual/01-special.gb
 # ROM = test_roms/gb-test-roms/cpu_instrs/individual/02-interrupts.gb
 # ROM = test_roms/gb-test-roms/cpu_instrs/individual/03-opsp,hl.gb
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/04-opr,imm.gb # pass
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/05-oprp.gb
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/06-ldr,r.gb
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb # pass
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/08-miscinstrs.gb # pass
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/09-opr,r.gb
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/10-bitops.gb # pass
+# ROM = test_roms/gb-test-roms/cpu_instrs/individual/11-opa,(hl).gb
+
 
 .PHONY: build run
 
@@ -66,7 +75,7 @@ run_helloworld:
 	$(MAKE) run ROM=test_roms/hello_world/hello_world.gb
 
 run: $(ROM)
-	./$(EMULATOR) --binary=0x0,$<
+	./$(EMULATOR) --binary=0x0,'$<'
 
 build: $(EMULATOR)
 
