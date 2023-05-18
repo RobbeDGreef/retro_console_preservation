@@ -501,92 +501,94 @@ function clause assembly(LDABC()) = concat_str(concat_str("ld", concat_str("\t",
 /* A=(BC) */
 function clause execute(LDABC()) = {
     timing_tick_cycle();
-    let res = read(read_reg16(reg16_name(BC)));
+    let addr = read_reg16(reg16_name(BC));
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = res;
+    write_reg8(reg8_name(A)) = read(addr);
     true
 }
 function clause assembly(LDADE()) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", "(DE)"))
 /* A=(DE) */
 function clause execute(LDADE()) = {
     timing_tick_cycle();
-    let res = read(read_reg16(reg16_name(DE)));
+    let addr = read_reg16(reg16_name(DE));
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = res;
+    write_reg8(reg8_name(A)) = read(addr);
     true
 }
 function clause assembly(LDANN(nn)) = concat_str(concat_str("ld", concat_str("\t", "A")), concat_str(", ", concat_str(concat_str("(", bits_str((nn))), ")")))
 /* A=(nn) */
 function clause execute(LDANN(nn)) = {
     timing_tick_cycle();
-    let res = read(nn);
+    /* in real cpu this would probably set the addr on the line */
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = res;
+    write_reg8(reg8_name(A)) = read(nn);
     true
 }
 function clause assembly(LDBCA()) = concat_str(concat_str("ld", concat_str("\t", "(BC)")), concat_str(", ", "A"))
 /* (BC)=A */
 function clause execute(LDBCA()) = {
     timing_tick_cycle();
-    write(read_reg16(reg16_name(BC)), read_reg8(reg8_name(A)));
-    /* According to the docs now there is a cycle, but it doesn't specify what
-     * it does? So I guess I'll just have an empty cycle here. This occurs multiple 
-     * times when a write is done, I guess the CPU needs a cycle to reset the bus 
-     * or something? */
+    let addr = read_reg16(reg16_name(BC));
     timing_tick_cycle();
+    write(addr) = read_reg8(reg8_name(A));
     true
 }
 function clause assembly(LDDEA()) = concat_str(concat_str("ld", concat_str("\t", "(DE)")), concat_str(", ", "A"))
 /* (DE)=A */
 function clause execute(LDDEA()) = {
     timing_tick_cycle();
-    write(read_reg16(reg16_name(DE)), read_reg8(reg8_name(A)));
+    let addr = read_reg16(reg16_name(DE));
     timing_tick_cycle();
+    write(addr) = read_reg8(reg8_name(A));
     true
 }
 function clause assembly(LDNNA(nn)) = concat_str(concat_str("ld", concat_str("\t", concat_str(concat_str("(", bits_str((nn))), ")"))), concat_str(", ", "A"))
 /* (nn)=A */
 function clause execute(LDNNA(nn)) = {
     timing_tick_cycle();
-    write(nn) = read_reg8(reg8_name(A));
+    let addr = nn;
     timing_tick_cycle();
+    write(addr) = read_reg8(reg8_name(A));
     true
 }
 function clause assembly(LDIHLA()) = concat_str(concat_str("ldi", concat_str("\t", "(HL)")), concat_str(", ", "A"))
 /* (HL)=A, HL=HL+1 */
 function clause execute(LDIHLA()) = {
     timing_tick_cycle();
-    /* Again, I find this one in particular very strange but the docs I found say this */
-    write(read_reg16(reg16_name(HL))) = read_reg8(reg8_name(A));
-    write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + 1;
+    let hlval = read_reg16(reg16_name(HL));
     timing_tick_cycle();
+    write(hlval) = read_reg8(reg8_name(A));
+    write_reg16(reg16_name(HL)) = hlval + 1;
     true
 }
 function clause assembly(LDIAHL()) = concat_str(concat_str("ldi", concat_str("\t", "A")), concat_str(", ", "(HL)"))
 /* A=(HL), HL=HL+1 */
 function clause execute(LDIAHL()) = {
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = read(read_reg16(reg16_name(HL)));
-    write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + 1;
+    let hlval = read_reg16(reg16_name(HL));
     timing_tick_cycle();
+    write_reg8(reg8_name(A)) = read(hlval);
+    write_reg16(reg16_name(HL)) = hlval + 1;
     true
 }
 function clause assembly(LDDHLA()) = concat_str(concat_str("ldd", concat_str("\t", "(HL)")), concat_str(", ", "A"))
 /* (HL)=A, HL=HL-1 */
 function clause execute(LDDHLA()) = {
     timing_tick_cycle();
-    write(read_reg16(reg16_name(HL))) = read_reg8(reg8_name(A));
-    write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + -1;
+    let hlval = read_reg16(reg16_name(HL));
     timing_tick_cycle();
+    write(hlval) = read_reg8(reg8_name(A));
+    write_reg16(reg16_name(HL)) = hlval + -1;
     true
 }
 function clause assembly(LDDAHL()) = concat_str(concat_str("ldd", concat_str("\t", "A")), concat_str(", ", "(HL)"))
 /* A=(HL), HL=HL-1 */
 function clause execute(LDDAHL()) = {
     timing_tick_cycle();
-    write_reg8(reg8_name(A)) = read(read_reg16(reg16_name(HL)));
-    write_reg16(reg16_name(HL)) = read_reg16(reg16_name(HL)) + -1;
+    let hlval = read_reg16(reg16_name(HL));
     timing_tick_cycle();
+    write_reg8(reg8_name(A)) = read(hlval);
+    write_reg16(reg16_name(HL)) = hlval + -1;
     true
 }
 function clause assembly(LDRRNN(rr, nn)) = concat_str(concat_str("ld", concat_str("\t", reg16_str(rr))), concat_str(", ", bits_str(nn)))
@@ -1249,36 +1251,36 @@ function clause assembly(LDFF00NNA(n)) = concat_str("LD\t(", concat_str(bits_str
 /* write to io-port n (memory FF00+n) */
 function clause execute(LDFF00NNA(n)) = {
     timing_tick_cycle();
-    let res = read_reg8(reg8_name(A));
-    write(0xFF00 + EXTZ(n), res);
+    let addr = 0xFF00 + EXTZ(n);
     timing_tick_cycle();
+    write(addr) = read_reg8(reg8_name(A)); 
     true
 }
 function clause assembly(LDAFF00NN(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00 + EXTZ(n)), ")"))
 /* read from io-port n (memory FF00+n) */
 function clause execute(LDAFF00NN(n)) = {
     timing_tick_cycle();
-    let res = read(0xFF00 + EXTZ(n));
-    write_reg8(reg8_name(A)) = res;
-    timing_tick_cycle(); 
+    let addr = 0xFF00 + EXTZ(n);
+    timing_tick_cycle();
+    write_reg8(reg8_name(A)) = read(addr);
     true
 }
 function clause assembly(LDFF00CA(n)) = concat_str("LD\t(", concat_str(bits_str(0xFF00), "+C), A"))
 /* write to io-port C (memory FF00+C) */
 function clause execute(LDFF00CA()) = {
     timing_tick_cycle();
-    let res = read_reg8(reg8_name(A));
-    write(0xFF00 + EXTZ(read_reg8(reg8_name(C))), res);
+    let addr = 0xFF00 + EXTZ(read_reg8(reg8_name(C)));
     timing_tick_cycle();
+    write(addr) = read_reg8(reg8_name(A));
     true
 }
 function clause assembly(LDAFF00C(n)) = concat_str("LD\tA, (", concat_str(bits_str(0xFF00), "+C)"))
 /* read from io-port n (memory FF00+n) */
 function clause execute(LDAFF00C(n)) = {
     timing_tick_cycle();
-    let res = read(0xFF00 + EXTZ(read_reg8(reg8_name(C))));
-    write_reg8(reg8_name(A)) = res;
+    let addr = 0xFF00 + EXTZ(read_reg8(reg8_name(C)));
     timing_tick_cycle();
+    write_reg8(reg8_name(A)) = read(addr);
     true
 }
 function clause assembly(BITNR(n, r)) = concat_str(concat_str("bit", concat_str("\t", bits_str(n))), concat_str(", ", reg8_str(r)))
@@ -1358,6 +1360,7 @@ function clause assembly(DI()) = "di"
 /* disable interrupts, IME=0 */
 function clause execute(DI()) = {
     timing_tick_cycle();
+    print("interrupts off");
     interrupt_master = 0x00;
     true
 }
@@ -1365,6 +1368,7 @@ function clause assembly(EI()) = "ei"
 /* enable interrupts, IME=1 */
 function clause execute(EI()) = {
     timing_tick_cycle();
+    print("interrupts on");
     interrupt_master = 0x01;
     true
 }
@@ -1406,7 +1410,7 @@ function clause execute(CALLNN(nn)) = {
     set_PC(nn);
     true
 }
-function clause assembly(CALLFNN(c, nn)) = "CALL    c, nn"
+function clause assembly(CALLFNN(c, nn)) = concat_str("call", concat_str("\t", concat_str(concat_str(cond_str(c), ", "), bits_str(nn))))
 /* conditional call if nz,z,nc,c */
 function clause execute(CALLFNN(c, nn)) = {
     if condition_true(c) then 
