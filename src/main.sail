@@ -33,14 +33,12 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
     let decoded = decode(instruction);
 
     /* Print assembly */
-    let asm : string = match decoded {
-        Some(ast) => assembly(ast),
-        None(ast) => {throw error_internal_error(); "unknown instruction"}
-    };
-    print_instruction(inst_pc, asm, cycles_before);
+    let asm = assembly(decoded);
+
+    //print_instruction(inst_pc, asm, cycles_before);
 
     /* Call debugger hook before the instruction is executed */
-    debug_hook(inst_pc);
+    //debug_hook(inst_pc);
 
     /* Fetch execute overlap handling */
     if (not(prev_instruction)) then {
@@ -48,9 +46,7 @@ function fetch_decode_execute(prev_instruction): (bool) -> bool = {
     };
 
     /* Execute instruction */
-    let loop_again : bool = match decoded {
-        Some(ast) => execute(ast)
-    };
+    let loop_again = execute(decoded);
 
     //print_cpu_state();
 
