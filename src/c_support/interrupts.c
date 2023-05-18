@@ -55,4 +55,8 @@ void interrupts_init()
 {
     register_io_read_handler(0xFF0F, io_read_if);
     register_io_write_handler(0xFF0F, io_write_if);
+
+    /* The 0xFFFF interrupt enable register is not in IO memory 
+       range and is thus not called via the register hook but rather
+       from the switch statement in the custom_read_ram / custom_write_ram */
 }
