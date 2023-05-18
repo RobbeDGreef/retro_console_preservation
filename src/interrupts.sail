@@ -1,7 +1,3 @@
-register interrupt_flag : word
-register interrupt_enable : word
-register interrupt_master : word
-
 val interrupt_service_routine : (word, word) -> unit
 function interrupt_service_routine(addr, bit) = {
     /* Reset IF and IE */

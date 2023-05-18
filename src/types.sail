@@ -46,3 +46,7 @@ enum reg16_enum = {
     HL,
     SP
 }
+
+register interrupt_flag : word
+register interrupt_enable : word
+register interrupt_master : word
