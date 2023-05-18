@@ -8,6 +8,7 @@
 #include "memory.h"
 #include "debug.h"
 #include "timing.h"
+#include "joypad.h"
 
 #define DBG_FAKE_VLINE 0
 #define DBG_DISPLAY_TILES_ONLY 0
@@ -110,6 +111,9 @@ static void update_events()
         case SDL_QUIT:
             stop_sdl();
             exit(0);
+            break;
+        default:
+            joypad_update(&evt);
             break;
         }
     }

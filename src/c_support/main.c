@@ -5,6 +5,7 @@
 #include "timer.h"
 #include "timing.h"
 #include "interrupts.h"
+#include "joypad.h"
 
 int model_main(int argc, char *argv[]);
 
@@ -16,6 +17,7 @@ int main(int argc, char *argv[])
     memory_init();
     timer_init();
     screen_init();
+    joypad_init();
 
     pthread_t thread;
     pthread_create(&thread, NULL, screen_start, NULL);
