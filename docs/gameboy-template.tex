@@ -1,0 +1,53 @@
+\documentclass[a4paper]{article}
+
+\usepackage{etoolbox}
+\usepackage[nounderscore]{syntax}
+\usepackage{amsmath,amssymb}
+\usepackage[svgnames]{xcolor}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{fullpage}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true,linkcolor=DarkRed}
+
+\newcommand{\TODO}[1]{{\color{red}{TODO: #1}}}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  columns=fullflexible,
+  breaklines=true,
+  postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+}
+
+\lstdefinelanguage{sail}
+  { morekeywords={val,function,mapping,cast,type,forall,overload,operator,enum,union,undefined,exit,and,assert,sizeof,
+      scattered,register,inc,dec,if,then,else,effect,let,as,@,in,end,Type,Int,Order,match,clause,struct,
+      foreach,from,to,by,infix,infixl,infixr,bitfield,default,try,catch,throw,constraint,monadic},
+    keywordstyle={\bf\ttfamily\color{blue}},
+    morestring=[b]",
+    stringstyle={\ttfamily\color{red}},
+    morecomment=[l][\itshape\color{DarkGreen}]{//},
+    morecomment=[s][\itshape\color{DarkGreen}]{/*}{*/},
+    deletestring=[bd]{'},
+    escapechar=\#,
+    emphstyle={\it},
+    literate=
+      {\{|}{{$\{|$}}1
+      {|\}}{{$|\}$}}1
+  }
+
+\lstset{language=sail}
+
+\begin{document}
+
+\tableofcontents
+
+\title{The gameboy instruction set}
+
+\section{Instruction set}
+
+\include{instructions/commands.tex}

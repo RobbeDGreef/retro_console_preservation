@@ -9,4 +9,6 @@ disassembler
 scripts
 test.csv
 debug
-latex_docs/
+docs/gameboy.pdf
+docs/gameboy.tex
+docs/instructions/

@@ -79,8 +79,20 @@ run: $(ROM)
 
 build: $(EMULATOR)
 
+lexer_syntax.sed: ../saillexer.mll
+	sed -n -e 's/^ *("\([A-Za-z0-9]*\)",[ \t]*(fun . -> \(.*\)));$//s\/{\2}\/{\\\\lstinline{\1}}\//p' \
+	  -e '/ *| "~"/d' \
+	  -e 's/~/\\\\~/g' \
+	  -e 's/^ *| "\([^"{}&]\+\)"[ \t]*{ (\?\([A-Za-z]\+\)\((.*)\)\?)\? }$//s\/{\2}\/{\\\\lstinline"\1"}\//p' \
+	  < ../saillexer.mll > lexer_syntax.sed
+
+parser_grammar.tex parser_package.sty: ../sailparser.mly lexer_syntax.sed extra_lexer_syntax.sed
+	sed -e '/[Ii]nternal_\?\([Pp][Ll]et\|[Rr]eturn\)/d' -e '/_eof:/,/^ *$$/d' ../sailparser.mly > sailparser.mly
+	obelisk latex -i -o parser_grammar.tex -prefix sail -package parser_package sailparser.mly
+	sed -i.bak -f lexer_syntax.sed -f extra_lexer_syntax.sed parser_package.sty
+
 docs:
-	sail -o $(LATEX_OUT) -latex src/main.sail
+	$(MAKE) -C docs
 
 c_files:
 	sail -c -O src/main.sail -o $(C_OUT_DIR)/main -c_include "support.h" -c_no_main # -verbose 1 -dtc_verbose 1
