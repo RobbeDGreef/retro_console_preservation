@@ -55,7 +55,7 @@ class Merger:
             with open("gameboy-template.tex", "r") as temp:
                 f.write(temp.read())
 
-            for instruction, commands in instruction_commands.items():
+            for instruction, commands in sorted(instruction_commands.items(), key=lambda kv: kv[0]):
                 f.write(f"\subsection{'{'}{instruction}{'}'}\n")
                 for command in commands:
                     f.write(f"{command}\n")
