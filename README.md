@@ -93,7 +93,3 @@ To install rgbds follow the instructions in [this](https://rgbds.gbdev.io/instal
 
 ## Todo
 - write a dockerfile with a pinned specific version of sail
-
-
-## License
-All rights reserved.
